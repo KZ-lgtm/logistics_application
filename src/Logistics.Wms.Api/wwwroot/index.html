@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logistics WMS</title>
+<style>
+  :root {
+    --bg: #14181d; --panel: #1b2026; --line: #2c343c; --text: #e8ecef; --muted: #9aa4ad;
+    --accent: #ff6a13; --ok: #35c26b; --warn: #ffb020; --bad: #ff4d4d; --info: #2fa8ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; flex: 1 1 auto; }
+  header h1 span { color: var(--muted); font-weight: 400; }
+  button { font: inherit; color: var(--text); background: #232a31; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: #4a5561; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  input, select { font: inherit; color: var(--text); background: #11151a; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+  main { display: grid; gap: 12px; padding: 12px 16px 24px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+  section h2 { margin: 0 0 10px; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-6 { grid-column: span 6; } .span-4 { grid-column: span 4; }
+  @media (max-width: 1000px) { .span-8, .span-6, .span-4 { grid-column: span 12; } }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .kpi { background: #161b20; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .kpi b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .kpi span { color: var(--muted); font-size: 11px; }
+  .lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .lane { border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: #161b20; }
+  .lane .id { font-weight: 600; display: flex; justify-content: space-between; }
+  .lane .bar { height: 6px; background: #0f1215; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+  .lane .bar i { display: block; height: 100%; background: var(--ok); }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid currentColor; }
+  .s-Ready { color: var(--muted); } .s-Active { color: var(--ok); } .s-Outbound, .s-Inbound { color: var(--info); } .s-AtOperator { color: var(--accent); }
+  .muted { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; }
+  .scroll { max-height: 320px; overflow: auto; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .warn { color: var(--warn); } .bad { color: var(--bad); }
+  #err { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Logistics WMS <span>· cylinder ASRS → 3D vision picking → bar-code sortation · put wall</span></h1>
+  <span id="sim" class="muted">simulation —</span>
+  <button class="primary" id="btn-start">Start simulation</button>
+  <button id="btn-stop">Stop</button>
+  <button id="btn-step">Step ×10</button>
+  <a href="/openapi/v1.json" style="color: var(--accent)">OpenAPI</a>
+</header>
+<main>
+  <section class="span-12">
+    <h2>Key figures</h2>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section class="span-8">
+    <h2>Put wall · rolling waves (one order per lane)</h2>
+    <div class="lanes" id="lanes"></div>
+  </section>
+
+  <section class="span-4">
+    <h2>R1 · picking stops</h2>
+    <div id="r1" class="muted">—</div>
+    <table style="margin-top: 8px"><thead><tr><th>Stop</th><th>Bin</th><th>SKU</th><th>Qty</th><th>Picks</th></tr></thead><tbody id="stations"></tbody></table>
+    <div id="exc" style="margin-top: 10px"></div>
+  </section>
+
+  <section class="span-6">
+    <h2>Orders</h2>
+    <div class="row" style="margin-bottom: 8px">
+      <input id="o-ref" placeholder="Reference" size="12">
+      <input id="o-lines" placeholder="SKU-1001:2, SKU-1004:1" size="24">
+      <input id="o-prio" type="number" value="0" style="width: 64px" title="Priority">
+      <button id="btn-order">Create order</button>
+      <span id="err"></span>
+    </div>
+    <div class="scroll"><table><thead><tr><th>#</th><th>Reference</th><th>Status</th><th>Lane</th><th>Items</th><th>Lines</th></tr></thead><tbody id="orders"></tbody></table></div>
+  </section>
+
+  <section class="span-6">
+    <h2>Stock per SKU</h2>
+    <div class="scroll"><table><thead><tr><th>SKU</th><th>Size</th><th>Bins</th><th>In rack</th><th>On loops</th><th>Total</th><th>Demand</th><th>Reorder</th></tr></thead><tbody id="stock"></tbody></table></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+async function api(path, opt) {
+  const r = await fetch('/api' + path, opt);
+  if (r.status === 204) return null;
+  const body = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(body?.detail || r.statusText);
+  return body;
+}
+const post = (path, body) => api(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+
+function kpi(label, value, cls = '') { return `<div class="kpi"><b class="${cls}">${esc(value)}</b><span>${esc(label)}</span></div>`; }
+
+async function refresh() {
+  try {
+    const [d, sim, orders, stock] = await Promise.all([api('/dashboard'), api('/simulation'), api('/orders?take=40'), api('/inventory/skus')]);
+    const t = d.throughput, o = d.orders, s = d.storage;
+    $('sim').textContent = `simulation ${sim.running ? 'running' : 'stopped'} · round ${sim.rounds}`;
+    $('kpis').innerHTML = [
+      kpi('orders last hour', t.ordersLastHour), kpi('items sorted last hour', t.itemsSortedLastHour),
+      kpi('queued / active orders', `${o.queued} / ${o.active}`), kpi('completed orders', o.completed),
+      kpi('avg. lead time (s)', o.averageLeadTimeSeconds == null ? '—' : o.averageLeadTimeSeconds.toFixed(1)),
+      kpi('items per bin presentation', t.itemsPerPresentation.toFixed(2)),
+      kpi('no-read rate', (t.noReadRate * 100).toFixed(2) + ' %', t.noReadRate > 0.02 ? 'warn' : ''),
+      kpi('bins in rack / free slots', `${s.binsInRack} / ${s.freeSlots}`),
+      kpi('bins on pick / restock loop', `${s.binsOnPickLoop} / ${s.binsOnRestockLoop}`),
+      kpi('cartons in stock', s.itemsInStock),
+    ].join('');
+    $('lanes').innerHTML = d.lanes.map(l => `<div class="lane">
+        <div class="id">${esc(l.id)} <span class="pill s-${l.state}">${l.disabled ? 'disabled · ' : ''}${esc(l.state)}</span></div>
+        <div class="muted">${l.orderId ? `order ${l.orderId} · ${l.sortedItems}/${l.orderItems}` : '&nbsp;'}</div>
+        <div class="bar"><i style="width:${l.orderItems ? 100 * l.sortedItems / l.orderItems : 0}%"></i></div>
+        <div class="muted" style="font-size: 11px; margin-top: 4px">${l.casesCompleted} cases done</div></div>`).join('');
+    const r = d.currentAsrsTask;
+    $('r1').innerHTML = r ? `R1 · <b>${esc(r.kind)}</b> bin ${esc(r.binId)} (${esc(r.skuCode)} · ${r.binQuantity}) · ${esc(r.from)} → ${esc(r.to)}` : 'R1 · idle';
+    $('stations').innerHTML = d.stations.map(st => `<tr><td>${st.station}</td><td>${esc(st.binId ?? '—')}</td><td>${esc(st.skuCode ?? '')}</td><td>${st.binId ? st.binQuantity : ''}</td><td>${st.picks.length}</td></tr>`).join('');
+    const e = d.exceptions;
+    $('exc').innerHTML = `Exception tote <b class="${e.toteFull ? 'bad' : ''}">${e.toteCount}/${e.toteCapacity}</b> · ${e.open} open` +
+      (d.lowStock.length ? ` · <span class="warn">${d.lowStock.length} SKU(s) at reorder point</span>` : '');
+    $('orders').innerHTML = orders.map(x => `<tr><td>${x.id}</td><td>${esc(x.reference)}</td><td><span class="pill s-${x.status === 'Completed' ? 'Ready' : x.status === 'Active' ? 'Active' : 'AtOperator'}">${esc(x.status)}</span></td>
+        <td>${esc(x.laneId ?? '')}</td><td>${x.sortedQuantity}/${x.totalQuantity}</td><td class="muted">${x.lines.map(l => `${esc(l.skuCode)}×${l.quantity}`).join(', ')}</td></tr>`).join('');
+    $('stock').innerHTML = stock.map(k => `<tr><td>${esc(k.code)}</td><td>${k.size}</td><td>${k.bins}</td><td>${k.inRack}</td><td>${k.onLoops}</td>
+        <td class="${k.lowStock ? 'warn' : ''}">${k.total}</td><td>${k.openDemand + k.pendingPicks}</td><td>${k.reorderPoint}</td></tr>`).join('');
+  } catch (err) { $('sim').textContent = 'WMS not reachable: ' + err.message; }
+}
+
+$('btn-start').onclick = () => post('/simulation/start').then(refresh);
+$('btn-stop').onclick = () => post('/simulation/stop').then(refresh);
+$('btn-step').onclick = () => post('/simulation/step?rounds=10').then(refresh);
+$('btn-order').onclick = async () => {
+  $('err').textContent = '';
+  try {
+    const lines = $('o-lines').value.split(',').map(x => x.trim()).filter(Boolean).map(x => {
+      const [skuCode, q] = x.split(':'); return { skuCode: skuCode.trim(), quantity: parseInt(q || '1', 10) };
+    });
+    await post('/orders', { reference: $('o-ref').value, lines, priority: parseInt($('o-prio').value || '0', 10) });
+    $('o-ref').value = ''; $('o-lines').value = ''; refresh();
+  } catch (err) { $('err').textContent = err.message; }
+};
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>

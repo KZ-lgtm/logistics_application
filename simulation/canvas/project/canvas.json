@@ -1,0 +1,66 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-09-17T09:00:00Z"
+  },
+  "title": "Logistics Application",
+  "launch": {
+    "view": "focused",
+    "file": "Main.dc.html"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Logistics Application — live 3D simulation",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "RiskAssessment_EN.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1200,
+      "h": 2600,
+      "title": "Risk assessment — ISO 12100 (RevA)",
+      "print": "flow",
+      "paper": "a4"
+    },
+    "RiskAssessment_ZH.dc.html": {
+      "x": 2800,
+      "y": 0,
+      "w": 1200,
+      "h": 2600,
+      "title": "風險評估 — ISO 12100 (RevA)",
+      "print": "flow",
+      "paper": "a4"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "RiskAssessment_EN.dc.html",
+    "RiskAssessment_ZH.dc.html"
+  ],
+  "notes": {
+    "n1": {
+      "x": 0,
+      "y": -140,
+      "w": 720,
+      "text": "Interactive 3D goods-to-robot order fulfilment after the ABB Robotics video \"ABB Robotics | Logistics\" (YouTube uUGB30RUQlA, Cainiao / Dasu warehouse: IRB 6700 inside an automated storage and retrieval cylinder shelf of bar-coded bins, 2 × IRB 1200 with 3D vision wave picking, 2 × IRB 360 bar-code sortation into order cases), rebuilt with library robots: R1 IRB 6700-150/3.20 with an L-fork in a 26-column × 8-level cylinder shelf (144 slots, east port for the picking loop, west port for the restock loop, north passage), R2 / R3 IRB 1300-12/1.4 with 4-cup vacuum grippers and a 3D camera over each bin stop, S1 / S2 IRB 930-22/1.05 SCARAs for the deltas (the IRB 920T of the feasibility study cannot reach the belt and four lanes with one elbow); kinematics and joint limits from the RobotStudio PIM.xml. Process: rolling waves on an 8-lane put wall (one order per lane, the WMS adds up open lines per SKU) · R1 retrieves the bin, returns first, dynamic slotting · bin to stop P2 / P1 · 3D image before every pick · cartons onto the item belt into a free gap · bar-code arch (no-read → exception tote outside) · S1 / S2 put into the order case · finished case runs out to the packing operator, empty case in · empty bins out through the west port to the restock operator. Verified 4 × 1 h: 677 items / h and 205 orders / h (Pareto demand, R1 88 % busy = bottleneck, 2.0 items per bin presentation), 655 / 194 flat demand, 769 items / 144 orders per hour with 6-line orders, 5 % no-read and 90 s restock, 245 single-line orders / h at 70 % speed (packing operator 93 % busy); 0 reach failures, 0 A1 wraps (R1 A4 0°, A6 ±23°), no stall, 0 interlock violations, robot ↔ robot ≥ 0.25 m, robot ↔ equipment ≥ 0.058 m, R1 0 shelf contacts, cartons and bins conserved, operator workspace 0 overlaps. Safety: one zone, guard-locked doors north / south, 9 × OS32C (100 % incl. the ring interior), muted curtains at the restock tunnel (1730 ≤ 1850 mm) and the put-wall tunnels (30 mm, 528 ≤ 970 mm). Electrical: MCP, SC1, RC1 (OmniCore V250XT), RC2 (4 × OmniCore C30), 9 JBs, 84 devices — 0 issues, robot ↔ installation ≥ 0.37 m, cable audit 0. Adjustable: robot speed, no-read rate, restock time, lines and quantity per order; modes Pareto / flat demand; door and E-stop toggles.",
+      "size": "s",
+      "color": "orange"
+    },
+    "n2": {
+      "x": 1520,
+      "y": -140,
+      "w": 720,
+      "text": "ISO 12100 risk assessment RevA (EN / 繁中) for the logistics application: 16 + electrical hazards, 7 safety functions, 10 resolved findings (unguarded robots in the video → one zone with tunnels, fork wrist singularity → L-fork, top-level wrist vs ring beam, R2 / R3 paths over their base, S1 link 2 at the hood, put-wall curtain resolution, arch cable, bin routing). Product, orders, speeds and stopping times are assumptions. RevA: electrical plan — cabinets, service areas, supported cable routes (H17, H18, H19).",
+      "size": "s",
+      "color": "red"
+    }
+  },
+  "designSystems": []
+}

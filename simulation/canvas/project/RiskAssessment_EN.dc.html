@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #ffffff; color: #1b1f24; font-family: "Segoe UI", system-ui, sans-serif; font-size: 12px; line-height: 1.4; }
+    a { color: #b45309; } a:hover { color: #92400e; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #c9ced3; padding: 6px 7px; vertical-align: top; text-align: left; }
+    th { background: #eef1f4; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+    td.c { text-align: center; white-space: nowrap; }
+    td.pre { white-space: pre-line; }
+    .H { background: #f8d0d0; color: #8a1010; font-weight: 700; } .M { background: #fbe8c4; color: #7a4a00; font-weight: 700; }
+    .L { background: #d8f0dc; color: #1d5c2c; font-weight: 700; } .N { background: #e8ecef; color: #3d474d; font-weight: 700; }
+    .mx td { text-align: center; padding: 8px; }
+    .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #eef1f4; font-size: 11px; margin: 1px 2px 1px 0; }
+  </style>
+</helmet>
+<div style="width: 1200px; box-sizing: border-box; padding: 40px 44px; background: #ffffff; display: flex; flex-direction: column; gap: 18px;">
+  <div style="display: flex; flex-direction: column; gap: 4px; border-bottom: 3px solid #ff6a13; padding-bottom: 12px;">
+    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #6b7780;">Machine risk assessment · ISO 12100:2010 · Doc RA-LOG-01 · RevA</div>
+    <h1 style="margin: 0; font-size: 24px;">Logistics application — cylinder shelf (R1 IRB 6700, L-fork) → picking loop → 3D vision picking (R2 / R3 IRB 1300) → item belt + bar-code arch → sortation into order cases (S1 / S2 IRB 930) on an 8-lane put wall; restock loop through the west port</h1>
+    <div style="color: #4a555d;">Assessment date [DATE] · Assessed by [NAME / FUNCTION] · Reviewed by [NAME] · Machine limits per ISO 12100 §5.3 as listed below.</div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">1 · Machine limits (ISO 12100 §5.3)</h2>
+      <div>Equipment: ABB IRB 6700-150/3.20 (R1, 0.4 m pedestal, L-fork 0.3 m under the flange, bin centre 0.55 m ahead) in a cylinder shelf of 26 columns × 8 levels (inner face r 2.0 m, 144 slots, ports east / west, passage north, frame 3.75 m) · 2 × IRB 1300-12/1.4 (R2 / R3, 4-cup vacuum gripper, 3D camera over each bin stop) · 2 × IRB 930-22/1.05 (S1 / S2 for the IRB 360 of the video, 1.05 m pedestals, bellows cup) — kinematics and joint limits from the RobotStudio PIM.xml; zone conveyors (picking and restock loops with RATs), item belt with bar-code arch, 8 powered put-wall lanes.</div>
+      <div>Product and orders (assumed — the video shows neither): 40 SKUs in cartons S 120 × 90 × 60 / M 160 × 120 × 80 / L 240 × 170 × 110 mm (≤ 1.6 kg), 3 bins per SKU (8–32 cartons per bin), orders of 1–4 lines × 1–3 pcs (Pareto or flat demand), up to 8 active orders (one per put-wall lane, rolling waves).</div>
+      <div>Rates (digital layout, 4 × 1 h): 677 items / h and 205 orders / h with Pareto demand (2.0 items per bin presentation, R1 88 % busy — the shelf robot is the bottleneck), 655 / 194 flat demand, 769 items / 144 orders per hour with 6-line orders, 5 % no-read and 90 s restock, 245 single-line orders / h at 70 % robot speed (packing operator 93 % busy).</div>
+      <div>Space limits: fence x −3.2 → 10.6 m, y −3.2 → 3.45 m, H2000; guard-locked doors north (x 0.5 → 1.4, in line with the cylinder passage) and south (x 4.6 → 5.5); restock tunnel west (curtain at x −4.25), put-wall tunnels north (curtains at y 4.3), exception chute east; cabinets MCP, RC1, SC1 south and RC2 north; walkways outside.</div>
+      <div>Use: automatic operation with two operators outside (restock at the west stop ≈ 20 bins / h; packing at the put wall + exception tote 77–93 % busy); interventions through the doors with the cell stopped; ring entries under SF3 / SF4; maintenance under LOTO.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">2 · Applicable standards</h2>
+      <div>
+        <span class="tag">ISO 12100:2010</span> Safety of machinery — risk assessment and risk reduction (3-step method)<br>
+        <span class="tag">ISO/TR 14121-2</span> Risk assessment — practical guidance and examples (risk matrix used here)<br>
+        <span class="tag">ISO 10218-1 / -2</span> Industrial robots — robot and robot system / cell integration<br>
+        <span class="tag">ISO 11161</span> Integrated manufacturing systems — zones, spans of control (bay zoning)<br>
+        <span class="tag">ISO 13849-1 / -2</span> Safety-related parts of control systems — PL, Category; validation<br>
+        <span class="tag">IEC 60204-1</span> Electrical equipment of machines<br>
+        <span class="tag">ISO 13850</span> Emergency stop function<br>
+        <span class="tag">ISO 13855</span> Positioning of safeguards with respect to approach speeds (S = K·T + C)<br>
+        <span class="tag">ISO 13857</span> Safety distances — reaching over / through openings<br>
+        <span class="tag">ISO 14120</span> Guards — fixed and movable<br>
+        <span class="tag">ISO 14119</span> Interlocking devices, guard locking<br>
+        <span class="tag">ISO 14118</span> Prevention of unexpected start-up<br>
+        <span class="tag">IEC 61496-1 / -2 / -3</span> ESPE — light curtains (Type 4), laser scanners (Type 3)<br>
+        <span class="tag">IEC 62046</span> Application of protective equipment to detect persons, muting<br>
+        <span class="tag">EN 619</span> Unit-load conveyors — safety requirements<br>
+        <span class="tag">ISO 11228-1 / -2</span> Ergonomics — manual lifting, pushing and pulling<br>
+        <span class="tag">ISO 14122</span> Permanent means of access to machinery (pedestal, platforms)<br>
+        <span class="tag">IEC 61439-1 / -2</span> Low-voltage switchgear and controlgear assemblies (MCP, sub-cabinets)<br>
+        <span class="tag">IEC 60364-7-729</span> Low-voltage installations — operating and maintenance gangways (cabinet service areas)<br>
+        <span class="tag">IEC 61537</span> Cable management — cable tray and cable ladder systems (supports, spans, loads)<br>
+        <span class="tag">IEC 60364-5-52</span> Selection and erection of wiring systems (tray fill, protection against damage)<br>
+        <span class="tag">EN 15512, EN 15620, EN 15635</span> Steel static storage systems — design, tolerances, use and inspection (cylinder shelf)<br>
+        <span class="tag">ISO 4414</span> Pneumatic fluid power — vacuum grippers, stoppers<br>
+        <span class="tag">IEC 60825-1, IEC 62471</span> Laser and photobiological safety (bar-code readers, 3D projectors)<br>
+        <span class="tag">EN 280</span> Mobile elevating work platforms (shelf service at height)<br>
+        <span class="tag">EN 12845 / NFPA 13</span> Automatic sprinkler systems (fire load of stored goods)<br>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h2 style="margin: 0; font-size: 14px;">3 · Risk estimation method (ISO/TR 14121-2 matrix)</h2>
+    <div style="display: grid; grid-template-columns: 2fr 3fr; gap: 18px;">
+      <table class="mx">
+        <tr><th>Severity ↓ / Probability →</th><th>Very likely</th><th>Likely</th><th>Unlikely</th><th>Remote</th></tr>
+        <tr><th>Catastrophic — Death or permanent disability</th><td class="H">High</td><td class="H">High</td><td class="H">High</td><td class="M">Medium</td></tr>
+        <tr><th>Serious — Irreversible injury (amputation, fracture with lasting damage)</th><td class="H">High</td><td class="H">High</td><td class="M">Medium</td><td class="L">Low</td></tr>
+        <tr><th>Moderate — Reversible injury requiring medical treatment</th><td class="H">High</td><td class="M">Medium</td><td class="L">Low</td><td class="N">Negligible</td></tr>
+        <tr><th>Minor — First-aid injury</th><td class="M">Medium</td><td class="L">Low</td><td class="N">Negligible</td><td class="N">Negligible</td></tr>
+      </table>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div><b>Probability</b> combines exposure, probability of the hazardous event and possibility of avoidance (ISO 12100 §5.5.2). <b>Initial risk</b> is estimated with no safeguards; <b>residual risk</b> after the listed measures.</div>
+        <div><b>Acceptance:</b> <b>High</b> — Not acceptable — further risk reduction mandatory · <b>Medium</b> — Tolerable only with the listed measures implemented, verified and documented (ALARP) · <b>Low</b> — Acceptable · <b>Negligible</b> — Acceptable, no action</div>
+        <div><b>PLr</b> from the ISO 13849-1 risk graph (S · F · P); ISO 10218-2 sets PL d, Category 3 as the default minimum for robot-cell safety functions.</div>
+        <div><b>Key assumptions to verify on the real cell:</b> Product, order profile and masses are assumptions (the video shows no data); robot speeds are programmed values (R1 2.5 m/s, R2 / R3 2.2 m/s, S1 / S2 2.5 m/s), not datasheet values; stopping times for ISO 13855 assumed (R1 0.5 s, IRB 930 0.2 s, curtain + logic 0.05 s) — to be replaced by ABB stopping-distance data; 3D image 0.45 s per pick, bar-code no-read 0.5 %, restock 35 s per bin, case exchange 14 s, conveyor 0.45 m/s, RAT 0.35 m/s, put-wall lanes 0.4 m/s. Electrical plan: 400 V 3-phase TN-S supply to the MCP; typical cabinet sizes (MCP 1200 × 600 × 2000, sub-cabinets 800 × 400 × 1200, IRC5 730 × 720 × 970 mm); typical cable diameters for the tray fill; no building steel assumed — every tray is floor-supported; M12 cordsets ≤ 10 m.</div>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h2 style="margin: 0; font-size: 14px;">4 · Hazard identification and risk reduction (ISO 12100 Annex B hazard types; 3-step method)</h2>
+    <table>
+      <tr><th>ID</th><th>Phase · zone</th><th>Hazard</th><th>Initial risk</th><th>Risk reduction measures (1 inherent · 2 safeguarding · 3 information)</th><th>Safety function · PLr → PL</th><th>Residual risk</th></tr>
+      <tr><td class="c">H1</td><td>Automatic operation · R1 IRB 6700 inside the cylinder shelf (L-fork, bin ≤ 20 kg)</td><td>Mechanical · impact / crushing by R1 (TCP 2.5 m/s, fork 45 kg + bin) against the shelf, the conveyor heads in the east / west ports and the pedestal · a person in the ring (maintenance passage north, ports) · fatal injury</td><td class="c H">Catastrophic · Likely<br>HIGH</td><td class="pre">1 The whole system is one guarded zone (fence H2000 round the cylinder, the loops, the picking and the sortation area); guard-locked doors north (in line with the cylinder passage) and south (SF3); the shelf itself is no guard.
+2 Guard stop cat. 1 (SF1) on any door / scanner field; two OS32C on the R1 pedestal watch the ring interior (restart prevention, SF4).
+3 SafeMove (SF2): R1 Safe Zone = ring interior + the four port heads, tool speed 2.5 m/s automatic / 250 mm/s T1; the fork reaches into the shelf only in front of the served column (verified 0 shelf contacts over 4 × 1 h, arm ≥ 0.02 m inside the shelf face outside the served column).</td><td>SF1 guard stop 防護停止; SF2 SafeMove; SF4 restart prevention 防止重啟 · PLr d → PL d</td><td class="c M">Catastrophic · Remote<br>MEDIUM</td></tr>
+      <tr><td class="c">H2</td><td>Automatic operation · R2 / R3 IRB 1300 (picking) + S1 / S2 IRB 930 (sortation)</td><td>Mechanical · impact / crushing by R2 / R3 (2.2 m/s) between the picking loop, the camera gantries and the item belt, and by S1 / S2 (2.5 m/s, links at 1.3–1.7 m) between the belt, the put-wall hoods and the bar-code arch · fractures, head injury</td><td class="c H">Serious · Likely<br>HIGH</td><td class="pre">1 Same guarded zone, doors and guard stop as H1 (SF1, SF3); no access in automatic.
+2 SafeMove Safe Zones per robot (SF2), tool speed supervision; R2 / R3 swing between bin and belt round the west side of their base (no path over the base), S1 / S2 arcs ≤ 0.62 m from the base.
+3 Verified over 4 × 1 h: robot ↔ robot ≥ 0.25 m (capsules, every pair), robot ↔ fixed equipment ≥ 0.058 m (S1 link 2 ↔ put-wall hood), tools ≥ 0.40 m inside the fence except the sorter cup over its lane head.</td><td>SF1 guard stop 防護停止; SF2 SafeMove · PLr d → PL d</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H3</td><td>Entry into the cylinder (north passage) · bin jams, shelf / R1 maintenance</td><td>A person inside the ring is hidden from outside by the full shelf (3.75 m); restart of R1 by a second person while someone is in the ring; trapping between the fork and the shelf face (0.15 m gap) · fatal</td><td class="c H">Catastrophic · Unlikely<br>HIGH</td><td class="pre">1 Entry only through the guard-locked north door with all robots in SafeMove Stand Still and the drives STO (SF3); personal padlock at the door handle (lockout per person, ISO 14118).
+2 Reset only at the HMI outside and refused while either pedestal scanner (ring interior) or any field is occupied (SF4); no reset button inside the fence.
+3 The ring passage (0.96 m, columns 7–8 left out) is the only way in — no climbing through the ports (conveyors, hood + curtain at the restock tunnel).</td><td>SF3 guard locking 防護鎖; SF4 restart prevention 防止重啟 · PLr d → PL d</td><td class="c M">Catastrophic · Remote<br>MEDIUM</td></tr>
+      <tr><td class="c">H4</td><td>Bins on the fork and in the shelf · falling objects</td><td>A bin (≤ 20 kg) or cartons falling from the fork or from a shelf level (up to 3.17 m) on a fork misalignment, an E-stop during transfer or a bin pushed over the back stop · head / foot injury</td><td class="c M">Serious · Unlikely<br>MEDIUM</td><td class="pre">1 Fork with back rest and bin-present sensor; bins lifted 15 mm off the rails, in / out of a slot at ≤ 1.4 m/s, lowered at 0.3 m/s; back stops at r 2.62 m on every slot.
+2 Nobody in or under the shelf in automatic (H1, H3); hard hat and safety shoes for ring entries; bins with a jam are cleared with the fork parked.
+3 Shelf rails and stops inspected with the shelf (H5).</td><td>—</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H5</td><td>Cylinder shelf structure · stability</td><td>Collapse or tipping of the 3.75 m ring (144 slots × ≤ 20 kg ≈ 2.9 t) under eccentric load, a fork collision or a seismic event · fatal</td><td class="c H">Catastrophic · Unlikely<br>HIGH</td><td class="pre">1 Shelf designed and anchored as a static steel storage system (EN 15512 / EN 15620 tolerances, floor anchors per column, top ring beam and X bracing on the outer face); load sign per level.
+2 Fork collision prevented by SafeMove zones and the verified paths (H1); after any collision the shelf is inspected before restart (EN 15635, annual expert inspection).
+3 Seismic design per site.</td><td>—</td><td class="c M">Catastrophic · Remote<br>MEDIUM</td></tr>
+      <tr><td class="c">H6</td><td>Restock tunnel (west port) · empty bins out, refilled bins in</td><td>A person reaching or crawling through the 1.3 × 1.1 m tunnel mouth along the conveyors to the R1 head (fork 1.85 m inside); in-running nips at the rollers and the right-angle transfer at the operator stop · fatal / crushing of hands</td><td class="c H">Catastrophic · Unlikely<br>HIGH</td><td class="pre">1 Fixed hood over the tunnel (roof 1.12 m) with skirts to the floor; multi-beam curtain F3SG-PG at the tunnel mouth (SF6): S = 1730 mm required (ISO 13855, T = 0.55 s), 1850 mm available to the fork.
+2 Muting only while a bin crosses the curtain (two bin sensors, ≤ 4 s, muting lamp); interruption without a bin → R1 cat. 1 stop + loop STO, reset outside.
+3 Operator stop and RAT outside the fence with roller nip guards; the operator refills the bin in place (no lifting) and releases it with a push-button.</td><td>SF6 restock curtain + muting 補貨光幕＋遮蔽 · PLr d → PL d</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H7</td><td>Put wall (north) · order cases in and out through 8 lane tunnels</td><td>A hand reaching through a lane mouth (0.37 × 0.30 m) to the case at the robot end while S1 / S2 puts a carton (cup 0.97 m inside the curtain); finger trapping in the powered roller lane · fractures, amputation</td><td class="c H">Serious · Likely<br>HIGH</td><td class="pre">1 Fixed hood over each block of 4 lanes (roof 0.92 m) with skirts; one 30 mm (hand-detection) curtain per block at the tunnel mouth (SF7): S = 528 mm required (ISO 13855, T = 0.25 s), 970 mm available — a multi-beam curtain (1250 mm) would not fit.
+2 Muted only while a lane of that block moves a case; a lane moves only with the sorter tool out of the lane zone (verified 0 lane moves under a sorter).
+3 Low-torque MDR rollers with nip guards; the operator takes / sets the case only at the outer stop.</td><td>SF7 put-wall curtains + lane interlock 放置牆光幕＋通道互鎖 · PLr d → PL d</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H8</td><td>Picking loop · zone conveyors, bin stops, right-angle transfer</td><td>Crushing of hands between a bin and a stopper / RAT, in-running nips at rollers and chains when a jam is cleared; a bin moving while a gripper is in it</td><td class="c M">Serious · Unlikely<br>MEDIUM</td><td class="pre">1 Inside the guarded zone: all conveyor drives STO with the guard stop (SF1); jams cleared only through the locked doors.
+2 A bin leaves a stop only after the gripper has left it and a bin passes a stop only when it is free (verified 0 bin moves under a gripper).
+3 MDR zone conveyors (24 V, low torque), chain heads and RAT with nip guards.</td><td>SF1 guard stop 防護停止 · PLr d → PL d</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H9</td><td>Item belt, bar-code arch, 3D cameras</td><td>In-running nips at the belt drums; reaching for a stuck carton at the arch; laser class of the bar-code reader and the structured-light 3D projectors (eyes)</td><td class="c M">Moderate · Likely<br>MEDIUM</td><td class="pre">1 Inside the guarded zone, drum guards, belt STO with the guard stop; the belt holds while a gripper places or picks (verified 0 belt moves under a gripper).
+2 Bar-code reader laser class 1 / 2, 3D projectors per IEC 62471 exempt / RG1, mounted above head height and facing down.</td><td>—</td><td class="c N">Moderate · Remote<br>NEGLIGIBLE</td></tr>
+      <tr><td class="c">H10</td><td>Exception chute (east) · no-read cartons to the tote outside</td><td>Reaching through the chute mouth (0.34 × 0.30 m) to the belt end drum or S2; a full tote stopping the belt</td><td class="c M">Serious · Unlikely<br>MEDIUM</td><td class="pre">1 Covered chute through a sealed panel in the east fence, mouth 0.9 m outside the fence: the belt-end drum ≥ 0.9 m and S2 ≥ 1.4 m from the mouth (ISO 13857 Table 4, ≥ 850 mm).
+2 Tote-full sensor: the belt holds before the end (no carton left on the chute); the packing operator empties the tote (re-scan / restock), verified 26 exceptions per hour at 5 % no-read without a belt stop longer than 42 s.</td><td>—</td><td class="c N">Moderate · Remote<br>NEGLIGIBLE</td></tr>
+      <tr><td class="c">H11</td><td>Manual handling · restock, case exchange, exception tote</td><td>Repetitive handling of cartons (≤ 1.6 kg) into bins, full order cases (≤ 8 kg) to the packing cart, empty cases from the supply cart; awkward reach into the bin at the restock stop</td><td class="c M">Moderate · Likely<br>MEDIUM</td><td class="pre">1 Bins are never lifted: refilled in place at 0.75 m (stop height), released by push-button; stock pallet beside the stop.
+2 Cases taken at the outer lane stop at 0.58–0.80 m, carts beside the walkway; packing operator 77–93 % busy at 194–245 orders / h — a second operator or a take-away conveyor above 240 cases / h.
+3 Masses per ISO 11228-1 (cartons ≤ 1.6 kg, cases ≤ 8 kg); job rotation between restock and packing.</td><td>—</td><td class="c L">Moderate · Unlikely<br>LOW</td></tr>
+      <tr><td class="c">H12</td><td>Walkways outside the fence · operators, carts</td><td>Slips / trips and collisions with carts on the walkways round the put wall, the restock station and the exception tote</td><td class="c L">Moderate · Unlikely<br>LOW</td><td class="pre">1 Marked walkway 0.3–1.0 m outside the fence; carts and pallets in marked places beside it; operator body ≥ 0.22 m from every equipment footprint (verified 0 overlaps).
+2 Housekeeping; no cables on the walkway floor (all floor bridges inside the fence).
+1 Electrical installations in walkways and lanes: see H18.</td><td>—</td><td class="c N">Moderate · Remote<br>NEGLIGIBLE</td></tr>
+      <tr><td class="c">H13</td><td>Vacuum grippers · loss of grip</td><td>A carton (≤ 1.6 kg) dropped from R2 / R3 / S1 / S2 on a power or air loss, over the belt, a bin or a case</td><td class="c N">Minor · Unlikely<br>NEGLIGIBLE</td><td class="pre">1 Vacuum generators with non-return valves and vacuum switches; cartons carried only inside the fence at ≤ 1.28 m.
+2 A dropped carton is removed with the zone stopped (H8); no person under a carried carton.</td><td>—</td><td class="c N">Minor · Remote<br>NEGLIGIBLE</td></tr>
+      <tr><td class="c">H14</td><td>Maintenance, teaching (T1), shelf service at height</td><td>Working at height in the ring (top level 2.9 m, frame 3.75 m) for shelf or bin service; robot motion in T1 while teaching slot positions; unexpected start-up</td><td class="c M">Serious · Unlikely<br>MEDIUM</td><td class="pre">1 Work at height from a mobile platform (EN 280) through the north passage or from outside with the cell under LOTO; R1 parked at its home pose, brakes applied.
+2 Teaching in T1 ≤ 250 mm/s with a three-position enabling device, one person in the ring, SafeMove zones active.
+3 LOTO at the main disconnect and the air supply (EN 1037 / ISO 14118).</td><td>—</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H15</td><td>Fire load of the stored goods</td><td>Plastic bins and cartons (≈ 120 bins + order cases, ≈ 1.5 t of PP and cardboard) in a 3.75 m ring inside a fenced cell; fire spread, smoke</td><td class="c M">Catastrophic · Remote<br>MEDIUM</td><td class="pre">1 Fire protection per the site assessment (sprinklers over the ring, EN 12845 / NFPA 13), no ignition sources in the ring (cables in trays, drives outside), extinguishers at the doors.
+2 Doors open from inside without a tool (escape release on the guard locks); E-stop at both doors.</td><td>—</td><td class="c M">Catastrophic · Remote<br>MEDIUM</td></tr>
+      <tr><td class="c">H16</td><td>Order integrity (quality, not safety)</td><td>A wrong or missing carton in a case: unreadable bar code, a bin stored in the wrong slot, two cartons picked together</td><td class="c L">Minor · Likely<br>LOW</td><td class="pre">1 Every carton read at the arch; no-read → exception tote (never put into a case), the open quantity is picked again; bin bar code read at the fork (slot inventory per move).
+2 Vacuum switch per cup row; case lane releases only with the order complete.</td><td>—</td><td class="c N">Minor · Remote<br>NEGLIGIBLE</td></tr>
+      <tr><td class="c">H17</td><td>Cable routes · trays, ducts, floor bridges</td><td>Electrical / fire · cable insulation damaged — crushed by a vehicle or pallet, cut by moving equipment, hit by the robot, overheated in an overfilled tray → electric shock at exposed conductors, loss of a safety signal, fire</td><td class="c H">Serious · Likely<br>HIGH</td><td class="pre">1 Every cable between cabinets, junction boxes and robots runs on a perforated or ladder cable tray (IEC 61537) at ≥ 2.2 m, over traffic at the vehicle / load height + 0.2 m (no vehicle lanes; walkways outside the fence under trays at 2.4 m; ladder trays over the restock tunnel and over the put-wall tunnels (no upright in a tunnel or a lane); R1 cable on a floor bridge through the north passage of the cylinder and round the pedestal (the two ring scanners), R2 / R3 / S1 / S2 on short floor bridges from the north trunk, the camera posts from the south trunk); robot cables on floor cable bridges only inside the guarded zone and never across a flow path or lane; sensor cordsets (≤ 10 m) in wiring ducts on the fence rail and inside the equipment frames — no cable through the air or across a conveyor, lane or doorway; tray fill ≤ 40 % (max 24 %).
+2 Robot arms, tools and carried parts keep ≥ 0.37 m from every tray, support, vertical tray and cabinet over the full cycle (verified in the digital layout); safety signals with cross-fault detection (ISO 13849-2); PE continuity and insulation test (IEC 60204-1 §18).
+3 Trays, bridges and cordsets in the inspection plan; damaged cables replaced, not repaired.</td><td>—</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H18</td><td>Electrical installations in walkways and lanes</td><td>Mechanical · tripping over a floor cable bridge; a person or vehicle striking a tray upright or junction-box post; a tray section falling after a vehicle strike or overload; a cabinet door that cannot open fully (blocked escape)</td><td class="c M">Serious · Unlikely<br>MEDIUM</td><td class="pre">1 Tray supports: floor-standing strut uprights with anchored base plates, cross-arms and knee braces every ≤ 2.0 m, spans ≤ 2.5 m (perforated tray) / ≤ 6 m (ladder-tray bridges over lanes, doors and machines); no upright, post or junction box inside a vehicle lane (lane = vehicle + load), door swing, cabinet service area or flow path, on a fence line or within 0.9 m of a robot base (31 supports placed and checked in the layout); floor cable bridges with chamfered yellow ramps, only inside the cells, never in a doorway or walkway.
+2 Service areas kept clear and marked on the floor.
+3 Uprights next to traffic marked yellow / black; tray load and anchoring checked at installation and in the inspection plan.</td><td>—</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+      <tr><td class="c">H19</td><td>Electrical cabinets · MCP, sub-cabinets, robot controllers (outside the fence)</td><td>Electrical · shock, arc flash at the cabinets (400 V)</td><td class="c M">Serious · Unlikely<br>MEDIUM</td><td class="pre">1 One main control panel (MCP: incoming supply, lockable main disconnect, line PLC + safety PLC, power distribution); every cabinet stands outside the guarded area (MCP, RC1 (OmniCore V250XT, R1) and SC1 (conveyor control) south of the cell, doors facing south; RC2 (4 × OmniCore C30, R2 / R3 / S1 / S2) north beside the cylinder passage, door facing north); IEC 60204-1 / IEC 61439 enclosures IP54 with door-interlocked main switches; field devices on 24 V via 9 junction boxes, set outside the fence wherever the cordsets reach (serviceable without entering a zone).
+2 A clear service area in front of every cabinet door — depth ≥ max(1.0 m, door leaf + 0.5 m escape width), no fence, equipment, vehicle lane, door swing or other cabinet in it (IEC 60364-7-729; 4 / 4 clear in the layout); every cable between cabinets, junction boxes and robots on a supported tray (H17).
+3 Qualified personnel only (EN 50110-1); LOTO at the main disconnect; warning labels; arc-flash PPE per the site assessment.</td><td>—</td><td class="c L">Serious · Remote<br>LOW</td></tr>
+    </table>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">5 · Items HIGH after the first safeguarding pass — discussion and resolution</h2>
+      <table>
+        <tr><th>Item</th><th>Finding</th><th>Resolution adopted</th></tr>
+        <tr><td><b>H2</b></td><td>In the video the IRB 1200 pickers and the IRB 360 sorters stand next to open walkways with no visible guarding; the shelf robot is enclosed only by the shelf.</td><td>The whole system is one guarded zone; the only material interfaces are the restock tunnel (multi-beam, muted), the 8 put-wall lanes (30 mm curtains, muted) and the covered exception chute — operators work only outside.</td></tr>
+        <tr><td><b>H1</b></td><td>First R1 tool: a horizontal fork on a sideways flange (side mode) put the wrist into the A5 = 0 singularity at mid levels — A4 / A6 turned about one revolution per bin move (A6 range 18 000° in 1 h).</td><td>L-fork under a downward flange (mast 0.3 m, bin centre 0.55 m ahead of the TCP): A4 0°, A6 ±23°, A5 −2…126° over 4 × 1 h, all 8 levels in reach.</td></tr>
+        <tr><td><b>H1</b></td><td>Top level: with the first fork offset (0.45 m) the R1 wrist stood at the shelf face (r 2.0 m) and rose to the top ring beam (3.35 m).</td><td>Fork offset 0.55 m (wrist 0.1 m inside the face), top ring raised to 3.75 m: arm ≥ 0.02 m inside the shelf face outside the served column, 0 shelf contacts.</td></tr>
+        <tr><td><b>H2</b></td><td>R2 / R3 stand between the bin stop (south) and the item belt (north): the straight moves passed over their own base (94 reach failures in the first 120 s).</td><td>Bases turned (A1 = 0 faces west), every bin ↔ belt move swings round the west side at r ≥ 0.6 m: 0 reach failures, R2 ↔ R3 ≥ 0.33 m.</td></tr>
+        <tr><td><b>H2</b></td><td>S1 swung to its far put-wall lane on an arc of r 0.75 m: link 2 came within 0.016 m of the put-wall hood.</td><td>Sorter arcs ≤ 0.62 m from the base: S1 / S2 ≥ 0.058 m from the hoods, S1 ↔ S2 ≥ 0.25 m.</td></tr>
+        <tr><td><b>H7</b></td><td>A multi-beam (whole-body) curtain at the put-wall tunnel mouths needs S = 1250 mm; only 970 mm are available to the sorter cup.</td><td>Tunnel mouths limited to 0.37 × 0.30 m (no body access) and guarded by 30 mm hand-detection curtains: S = 528 mm ≤ 970 mm.</td></tr>
+        <tr><td><b>H9</b></td><td>Cable audit: the side bar-code reader cable on the arch post passed 0.043 m from the carton carried by S1.</td><td>Arch moved 0.2 m upstream (x 6.35 m): 0 cable runs / rises within 0.05 m of a tool or carried part, minimum 0.091 m.</td></tr>
+        <tr><td><b>H8</b></td><td>Bin routing: choosing the stop when a bin arrived at the decision point sent most bins to P1 while P2 was still clearing — R3 3 % busy, bins queued behind P1.</td><td>Stop chosen when the bin can leave the decision point (P1 free): P2 unless a bin is already at / heading to it — R2 / R3 43 / 40 % busy, 0 bins moving under a gripper, no stall in 4 × 1 h.</td></tr>
+        <tr><td><b>H18</b></td><td>First electrical plan: one drive + one sensor per conveyor zone put 13 / 22 / 23 devices on the 12-port JBs JP1 / JP2 / JR1; the two scanners on the R1 pedestal had no cable carrier, then 10.3 / 11.9 m cordsets.</td><td>Zone-controller cards (two MDR zones each) and bin sensors only at the decision points, a second restock JB (JR2), the R1 floor bridge continued round the pedestal and JC1 at the north fence beside the passage: 0 issues, 84 devices on 9 JBs, longest cordset 9.4 m.</td></tr>
+        <tr><td><b>H2</b></td><td>RC2 south of the cell: R2 / R3 manipulator cables 30.4 / 31.9 m (&gt; 30 m) and its service area in the south door swing; the north trunk had a 3.9 m unsupported span over the put-wall tunnels and JN1 / JN2 stood 0.8 m off the trunk.</td><td>RC2 moved north beside the cylinder passage (manipulator cables 6.2 / 7.7 / 11.0 / 15.4 m), 4 m ladder tray over the put-wall tunnels, JN1 / JN2 on the trunk 0.35 m along from the S1 / S2 bridge risers: robot ↔ installation ≥ 0.37 m.</td></tr>
+      </table>
+      <div><b>Result:</b> No residual High. H1, H3, H5 and H15 remain Medium (catastrophic severity, remote probability) — inherent to a shelf robot and a 3.75 m storage ring, tolerable only with SF1–SF7 (PL d / e) implemented, verified and documented and the shelf designed / inspected per EN 15512 / EN 15635; H11 remains Low (manual handling, Moderate / Unlikely); all other hazards Low or Negligible. Electrical plan (RevA): every cabinet outside the guarded area with a clear service area (4 / 4), all cables on supported trays, ducts and floor bridges, none across a flow path or lane; H17, H18, H19 added (cable damage, installations in walkways and lanes, cabinets) — Low after the measures; 2 findings of the plan resolved and mirrored in the 3D layout.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">6 · Safety functions summary (ISO 13849-1)</h2>
+      <table>
+        <tr><th>SF</th><th>Function</th><th>Input → logic → output</th><th>PLr</th><th>PL</th></tr>
+        <tr><td>SF1</td><td>Cell guard stop</td><td>north + south door (guard locking) and 9 × OS32C → safety PLC → SafeStop cat. 1 of R1, R2, R3, S1, S2 (OmniCore SafeMove), all conveyor / lane / belt drives STO</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF2</td><td>SafeMove zones and tool speed</td><td>Safe Zone per robot (R1 ring interior + port heads; R2 / R3 picking area; S1 / S2 belt + own lane heads), Tool Speed Supervision 2.5 / 2.2 / 2.5 m/s automatic, 250 mm/s T1</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF3</td><td>Guard locking of the cell doors</td><td>D4SL-N unlocked only with SafeMove Stand Still of all five robots and all drives in STO; escape release inside; personal padlock for ring entries</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF4</td><td>Reset / restart prevention (ring interior)</td><td>reset at the south-door HMI only; refused while any scanner field — including the two on the R1 pedestal that watch the ring interior hidden behind the shelf — is occupied</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF5</td><td>Emergency stop</td><td>7 E-stop stations (both doors, restock station, put wall × 2, exception chute, south-west corner) → safety PLC → robots cat. 1, all drives STO</td><td class="c">d</td><td class="c">e</td></tr>
+        <tr><td>SF6</td><td>Restock tunnel curtain with muting</td><td>F3SG-PG multi-beam at the tunnel mouth, muted by two bin sensors only while a bin crosses (≤ 4 s, muting lamp); interruption otherwise → R1 cat. 1 + restock loop STO</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF7</td><td>Put-wall curtains and lane interlock</td><td>F3SG-PG 30 mm per 4-lane block, muted only while a lane of that block moves a case; lane drive enabled only with SafeMove &quot;sorter tool out of the lane zone&quot;; interruption → S1 / S2 cat. 1 + lanes STO</td><td class="c">d</td><td class="c">d</td></tr>
+      </table>
+      <h2 style="margin: 8px 0 0; font-size: 14px;">7 · Verification and validation before release</h2>
+      <div>Digital layout (stations/logistics_application/verify.js, 4 × 1 h): 0 reach failures, 0 A1 wraps, R1 A4 0° / A6 ±23°, longest wait on a resource 8 s, longest time without a sorted carton 42 s; 0 images with a gripper in the 3D field of view, 0 bin moves under a gripper, 0 belt moves under a placing / picking gripper, 0 lane moves under a sorter; robot ↔ robot ≥ 0.25 m, robot ↔ fixed equipment ≥ 0.058 m, R1 0 shelf contacts, arm ≥ 0.02 m inside the shelf face outside the served column, carried bin 0 contacts with the port heads; cartons and bins conserved, no order over-sorted. · Safety functions SF1–SF7: PL verification per ISO 13849-2 (SISTEMA); functional test of every door, scanner field (coverage.py 100 % incl. the ring interior from the R1 pedestal), E-stop, both muting sequences (bin / case passing, interruption without), lane interlock; curtain distances measured against the ABB stopping data (ISO 13855: restock 1730 ≤ 1850 mm, put wall 528 ≤ 970 mm). · Shelf: load test per level, anchor torque, plumb / level tolerances (EN 15620); fork bin-present sensor and back stops tested with a full bin on every level · Robot stopping distances measured in reduced automatic and compared with the ABB data; vacuum hold on air loss tested with the heaviest carton · Electrical layout check in the digital layout (engine/tools/verify_electrical.js): 0 issues — every junction box, cabinet and robot on a routed tray, junction-box ports, cordsets ≤ 10 m on carriers, fill ≤ 40 %, service areas clear, spans ≤ 2.5 m / 6 m, no floor bridge or cordset across a flow path or lane; robot-to-installation clearance ≥ 0.3 m (measured 0.37 m) · On site: IEC 60204-1 §18 tests (PE continuity, insulation resistance, voltage test, residual voltage); service areas free and marked; tray supports anchored and load-checked; tray clearance over every lane measured with the real vehicle and load</div>
+    </div>
+  </div>
+  <div style="border-top: 1px solid #c9ced3; padding-top: 8px; color: #6b7780; font-size: 11px;">Prepared from the digital layout of this canvas (Main artboard). Positions in metres from the robot base. Values in [ ] are to be filled from supplier documentation. This assessment does not replace the integrator&#x27;s technical file.</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1200,"height":2600}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

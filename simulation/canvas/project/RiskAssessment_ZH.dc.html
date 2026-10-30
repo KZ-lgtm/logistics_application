@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #ffffff; color: #1b1f24; font-family: "Segoe UI", system-ui, sans-serif; font-size: 12px; line-height: 1.4; }
+    a { color: #b45309; } a:hover { color: #92400e; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #c9ced3; padding: 6px 7px; vertical-align: top; text-align: left; }
+    th { background: #eef1f4; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+    td.c { text-align: center; white-space: nowrap; }
+    td.pre { white-space: pre-line; }
+    .H { background: #f8d0d0; color: #8a1010; font-weight: 700; } .M { background: #fbe8c4; color: #7a4a00; font-weight: 700; }
+    .L { background: #d8f0dc; color: #1d5c2c; font-weight: 700; } .N { background: #e8ecef; color: #3d474d; font-weight: 700; }
+    .mx td { text-align: center; padding: 8px; }
+    .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #eef1f4; font-size: 11px; margin: 1px 2px 1px 0; }
+  </style>
+</helmet>
+<div style="width: 1200px; box-sizing: border-box; padding: 40px 44px; background: #ffffff; display: flex; flex-direction: column; gap: 18px;">
+  <div style="display: flex; flex-direction: column; gap: 4px; border-bottom: 3px solid #ff6a13; padding-bottom: 12px;">
+    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #6b7780;">機械風險評估 · ISO 12100:2010 · Doc RA-LOG-01 · RevA</div>
+    <h1 style="margin: 0; font-size: 24px;">物流應用 — 圓筒料架（R1 IRB 6700，L 形貨叉）→ 揀貨迴路 → 3D 視覺揀貨（R2／R3 IRB 1300）→ 物品輸送帶＋條碼門架 → 分揀至 8 通道放置牆之訂單箱（S1／S2 IRB 930）；經西埠之補貨迴路</h1>
+    <div style="color: #4a555d;">評估日期 [日期] · 評估者 [姓名／職務] · 審核 [姓名] · 機械限制依 ISO 12100 §5.3 如下。</div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">1 · 機械限制（ISO 12100 §5.3）</h2>
+      <div>設備：ABB IRB 6700-150/3.20（R1，0.4 m 基座，法蘭下 0.3 m 之 L 形貨叉，料箱中心在前 0.55 m）位於 26 欄 × 8 層之圓筒料架（內面 r 2.0 m、144 料位、東／西埠、北側通道、框架 3.75 m）· 2 台 IRB 1300-12/1.4（R2／R3，4 吸盤真空夾爪，每一料箱停止位上方設 3D 相機）· 2 台 IRB 930-22/1.05（S1／S2 取代影片之 IRB 360，1.05 m 基座，波紋吸盤）— 運動學與關節極限取自 RobotStudio PIM.xml；區段輸送（揀貨與補貨迴路含直角移載）、具條碼門架之物品輸送帶、8 條動力放置牆通道。</div>
+      <div>產品與訂單（假設 — 影片皆未顯示）：40 個 SKU，紙箱 S 120 × 90 × 60／M 160 × 120 × 80／L 240 × 170 × 110 mm（≤ 1.6 kg），每 SKU 3 個料箱（每箱 8–32 個紙箱），訂單 1–4 行 × 1–3 件（柏拉圖或平均需求），最多 8 張進行中訂單（每條放置牆通道一張，滾動波次）。</div>
+      <div>速率（數位佈局，4 × 1 h）：柏拉圖需求每小時 677 件、205 張訂單（每次料箱呈現 2.0 件，R1 稼動 88 % — 料架機器人為瓶頸），平均需求 655／194，6 行訂單、無法讀取 5 %、補貨 90 s 時每小時 769 件／144 張，機器人 70 % 速度時每小時 245 張單行訂單（包裝作業員稼動 93 %）。</div>
+      <div>空間限制：圍籬 x −3.2 → 10.6 m、y −3.2 → 3.45 m、H2000；北側（x 0.5 → 1.4，與圓筒通道對齊）與南側（x 4.6 → 5.5）門具防護鎖；西側補貨隧道（光幕 x −4.25）、北側放置牆隧道（光幕 y 4.3）、東側例外滑槽；電櫃 MCP、RC1、SC1 位於南側，RC2 位於北側；外部走道。</div>
+      <div>使用：自動運轉時兩名作業員於外部作業（西側停止位補貨約每小時 20 箱；放置牆包裝＋例外料盒稼動 77–93 %）；工作站停止時經門介入；依 SF3／SF4 進入圓環；維修依 LOTO。</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">2 · 適用標準</h2>
+      <div>
+        <span class="tag">ISO 12100:2010</span> 機械安全 — 風險評估與風險降低（三步驟法）<br>
+        <span class="tag">ISO/TR 14121-2</span> 風險評估 — 實務指引與範例（本文件採用之風險矩陣）<br>
+        <span class="tag">ISO 10218-1 / -2</span> 工業機器人 — 機器人本體／機器人系統與工作站整合<br>
+        <span class="tag">ISO 11161</span> 整合製造系統 — 區域劃分、控制範圍（棧板區分區）<br>
+        <span class="tag">ISO 13849-1 / -2</span> 控制系統安全相關部分 — PL、Category；驗證<br>
+        <span class="tag">IEC 60204-1</span> 機械電氣設備<br>
+        <span class="tag">ISO 13850</span> 緊急停止功能<br>
+        <span class="tag">ISO 13855</span> 依接近速度定位安全防護裝置（S = K·T + C）<br>
+        <span class="tag">ISO 13857</span> 安全距離 — 跨越／穿過開口伸入<br>
+        <span class="tag">ISO 14120</span> 防護裝置 — 固定式與可動式<br>
+        <span class="tag">ISO 14119</span> 互鎖裝置、防護鎖<br>
+        <span class="tag">ISO 14118</span> 防止非預期啟動<br>
+        <span class="tag">IEC 61496-1 / -2 / -3</span> ESPE — 安全光柵（Type 4）、雷射掃描器（Type 3）<br>
+        <span class="tag">IEC 62046</span> 人員偵測防護設備之應用、屏蔽<br>
+        <span class="tag">EN 619</span> 單元負載輸送設備 — 安全要求<br>
+        <span class="tag">ISO 11228-1 / -2</span> 人因工程 — 人工抬舉、推拉<br>
+        <span class="tag">ISO 14122</span> 機械之固定通道（基座、平台）<br>
+        <span class="tag">IEC 61439-1 / -2</span> 低壓開關設備及控制設備組件（MCP、子盤）<br>
+        <span class="tag">IEC 60364-7-729</span> 低壓電氣裝置 — 操作與維修通道（電櫃維修區）<br>
+        <span class="tag">IEC 61537</span> 電纜管理 — 電纜托盤及梯架系統（支撐、跨距、荷重）<br>
+        <span class="tag">IEC 60364-5-52</span> 配線系統之選用與安裝（線槽填充、防損保護）<br>
+        <span class="tag">EN 15512, EN 15620, EN 15635</span> 鋼製靜態儲存系統 — 設計、公差、使用與檢查（圓筒料架）<br>
+        <span class="tag">ISO 4414</span> 氣壓動力 — 真空夾爪、停止器<br>
+        <span class="tag">IEC 60825-1, IEC 62471</span> 雷射與光生物安全（條碼讀取器、3D 投影器）<br>
+        <span class="tag">EN 280</span> 移動式升降工作平台（高處料架作業）<br>
+        <span class="tag">EN 12845 / NFPA 13</span> 自動灑水系統（儲存貨物火載量）<br>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h2 style="margin: 0; font-size: 14px;">3 · 風險評估方法（ISO/TR 14121-2 矩陣）</h2>
+    <div style="display: grid; grid-template-columns: 2fr 3fr; gap: 18px;">
+      <table class="mx">
+        <tr><th>嚴重度 ↓ / 發生可能性 →</th><th>非常可能</th><th>可能</th><th>不太可能</th><th>極少</th></tr>
+        <tr><th>災難性 — 死亡或永久失能</th><td class="H">高</td><td class="H">高</td><td class="H">高</td><td class="M">中</td></tr>
+        <tr><th>嚴重 — 不可逆傷害（截肢、造成永久損傷之骨折）</th><td class="H">高</td><td class="H">高</td><td class="M">中</td><td class="L">低</td></tr>
+        <tr><th>中度 — 可復原、需醫療處置之傷害</th><td class="H">高</td><td class="M">中</td><td class="L">低</td><td class="N">可忽略</td></tr>
+        <tr><th>輕微 — 急救即可處理之輕傷</th><td class="M">中</td><td class="L">低</td><td class="N">可忽略</td><td class="N">可忽略</td></tr>
+      </table>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div><b>發生可能性</b>結合暴露、危害事件機率與迴避可能性（ISO 12100 §5.5.2）。<b>初始風險</b>為無防護時之估計；<b>殘餘風險</b>為實施所列措施後。</div>
+        <div><b>接受準則:</b> <b>高</b> — 不可接受 — 必須進一步降低風險 · <b>中</b> — 僅在所列措施已實施、驗證並文件化時可容忍（ALARP） · <b>低</b> — 可接受 · <b>可忽略</b> — 可接受，無需措施</div>
+        <div><b>PLr</b> 依 ISO 13849-1 風險圖（S · F · P）；ISO 10218-2 對機器人工作站安全功能預設最低 PL d、Cat. 3。</div>
+        <div><b>須於實機驗證之關鍵假設：</b>產品、訂單結構與質量為假設（影片無資料）；機器人速度為程式設定值（R1 2.5 m/s、R2／R3 2.2 m/s、S1／S2 2.5 m/s），非型錄值；ISO 13855 停止時間為假設（R1 0.5 s、IRB 930 0.2 s、光幕＋邏輯 0.05 s）— 應以 ABB 停止距離資料取代；每次揀取 3D 拍攝 0.45 s、條碼無法讀取 0.5 %、每箱補貨 35 s、訂單箱更換 14 s、輸送 0.45 m/s、直角移載 0.35 m/s、放置牆通道 0.4 m/s。 電氣規劃：MCP 供電 400 V 三相 TN-S；電櫃尺寸取典型值（MCP 1200 × 600 × 2000、子盤 800 × 400 × 1200、IRC5 730 × 720 × 970 mm）；線槽填充以典型電纜外徑計；不假設建築鋼構 — 所有線槽皆落地支撐；M12 感測器電纜 ≤ 10 m。</div>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h2 style="margin: 0; font-size: 14px;">4 · 危害辨識與風險降低（ISO 12100 附錄 B 危害類型；三步驟法）</h2>
+    <table>
+      <tr><th>ID</th><th>階段 · 區域</th><th>危害</th><th>初始風險</th><th>風險降低措施（1 本質安全設計 · 2 安全防護 · 3 使用資訊）</th><th>安全功能 · PLr → PL</th><th>殘餘風險</th></tr>
+      <tr><td class="c">H1</td><td>自動運轉 · 圓筒料架內之 R1 IRB 6700（L 形貨叉，料箱 ≤ 20 kg）</td><td>機械性 · R1（TCP 2.5 m/s，貨叉 45 kg＋料箱）於料架、東／西埠輸送頭與基座間撞擊／夾壓 · 人員位於圓環內（北側維修通道、埠口）· 致命傷害</td><td class="c H">災難性 · 可能<br>高</td><td class="pre">1 整個系統為單一防護區（H2000 圍籬包圍圓筒、輸送迴路、揀貨與分揀區）；北側（與圓筒通道對齊）與南側門具防護鎖（SF3）；料架本身不作為防護。
+2 任一門／掃描器防護區觸發時防護停止 cat. 1（SF1）；R1 基座上兩台 OS32C 監視圓環內部（防止重啟，SF4）。
+3 SafeMove（SF2）：R1 Safe Zone = 圓環內部＋四個埠口輸送頭，自動時工具速度 2.5 m/s／T1 250 mm/s；貨叉僅於服務中之欄位前方伸入料架（4 × 1 h 驗證料架接觸 0 次，服務欄位以外手臂距料架面 ≥ 0.02 m）。</td><td>SF1 guard stop 防護停止; SF2 SafeMove; SF4 restart prevention 防止重啟 · PLr d → PL d</td><td class="c M">災難性 · 極少<br>中</td></tr>
+      <tr><td class="c">H2</td><td>自動運轉 · R2／R3 IRB 1300（揀貨）＋S1／S2 IRB 930（分揀）</td><td>機械性 · R2／R3（2.2 m/s）於揀貨迴路、相機門架與物品輸送帶間，S1／S2（2.5 m/s，連桿高 1.3–1.7 m）於輸送帶、放置牆罩與條碼門架間撞擊／夾壓 · 骨折、頭部傷害</td><td class="c H">嚴重 · 可能<br>高</td><td class="pre">1 與 H1 相同之防護區、門與防護停止（SF1、SF3）；自動運轉時無法進入。
+2 每台機器人 SafeMove Safe Zone（SF2）、工具速度監視；R2／R3 於料箱與輸送帶間經基座西側迴轉（路徑不越過基座），S1／S2 弧線半徑 ≤ 0.62 m。
+3 4 × 1 h 驗證：機器人間 ≥ 0.25 m（膠囊體，所有配對），機器人與固定設備 ≥ 0.058 m（S1 連桿 2 ↔ 放置牆罩），除分揀吸盤位於其通道端外工具距圍籬 ≥ 0.40 m。</td><td>SF1 guard stop 防護停止; SF2 SafeMove · PLr d → PL d</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H3</td><td>進入圓筒（北側通道）· 料箱卡料、料架／R1 維修</td><td>圓環內人員被滿載料架（3.75 m）遮蔽而外部看不到；他人於有人在圓環內時重啟 R1；於貨叉與料架面間（0.15 m 間隙）受困 · 致命</td><td class="c H">災難性 · 不太可能<br>高</td><td class="pre">1 僅能於所有機器人 SafeMove Stand Still 且驅動 STO 時經防護鎖北門進入（SF3）；門把設個人掛鎖（每人上鎖，ISO 14118）。
+2 僅能於外部 HMI 復歸，任一基座掃描器（圓環內部）或任一防護區有人時拒絕（SF4）；圍籬內無復歸按鈕。
+3 圓環通道（0.96 m，留空第 7–8 欄）為唯一入口 — 不得經埠口攀入（輸送機、補貨隧道之罩與光幕）。</td><td>SF3 guard locking 防護鎖; SF4 restart prevention 防止重啟 · PLr d → PL d</td><td class="c M">災難性 · 極少<br>中</td></tr>
+      <tr><td class="c">H4</td><td>貨叉上與料架中之料箱 · 物體掉落</td><td>料箱（≤ 20 kg）或紙箱於貨叉偏位、搬移中緊急停止或料箱被推越後擋時由貨叉或料架層（最高 3.17 m）掉落 · 頭部／足部傷害</td><td class="c M">嚴重 · 不太可能<br>中</td><td class="pre">1 貨叉具後擋與料箱檢知感測器；料箱離軌抬升 15 mm，進出料位 ≤ 1.4 m/s、下放 0.3 m/s；每一料位於 r 2.62 m 設後擋。
+2 自動運轉時無人在料架內或下方（H1、H3）；進入圓環時戴安全帽與安全鞋；卡料料箱於貨叉停放後清除。
+3 料架軌道與擋塊隨料架檢查（H5）。</td><td>—</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H5</td><td>圓筒料架結構 · 穩定性</td><td>3.75 m 圓環（144 料位 × ≤ 20 kg ≈ 2.9 t）於偏心載重、貨叉碰撞或地震時倒塌或傾倒 · 致命</td><td class="c H">災難性 · 不太可能<br>高</td><td class="pre">1 料架依靜態鋼製儲存系統設計並錨定（EN 15512／EN 15620 公差、每柱地錨、頂部環樑與外側交叉斜撐）；每層標示載重。
+2 以 SafeMove 區域與已驗證路徑防止貨叉碰撞（H1）；任何碰撞後於重啟前檢查料架（EN 15635，每年專家檢查）。
+3 依現場進行耐震設計。</td><td>—</td><td class="c M">災難性 · 極少<br>中</td></tr>
+      <tr><td class="c">H6</td><td>補貨隧道（西埠）· 空料箱送出、補滿料箱送入</td><td>人員經 1.3 × 1.1 m 隧道口沿輸送機伸手或爬入至 R1 輸送頭（貨叉在內 1.85 m）；操作員停止位之滾輪與直角移載捲入點 · 致命／手部夾壓</td><td class="c H">災難性 · 不太可能<br>高</td><td class="pre">1 隧道上方固定罩（頂 1.12 m）並設至地面之側裙；隧道口設多光束光幕 F3SG-PG（SF6）：所需 S = 1730 mm（ISO 13855，T = 0.55 s），至貨叉可用 1850 mm。
+2 僅於料箱通過光幕時遮蔽（兩個料箱感測器、≤ 4 s、遮蔽指示燈）；無料箱時遮斷 → R1 cat. 1 停止＋迴路 STO，於外部復歸。
+3 操作員停止位與直角移載位於圍籬外並設滾輪捲入防護；操作員於原位補貨（不需搬抬），以按鈕放行。</td><td>SF6 restock curtain + muting 補貨光幕＋遮蔽 · PLr d → PL d</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H7</td><td>放置牆（北側）· 訂單箱經 8 條通道隧道進出</td><td>手經通道口（0.37 × 0.30 m）伸至機器人端之訂單箱，同時 S1／S2 放入紙箱（吸盤距光幕 0.97 m）；動力滾輪通道夾手指 · 骨折、截斷</td><td class="c H">嚴重 · 可能<br>高</td><td class="pre">1 每 4 條通道設固定罩（頂 0.92 m）與側裙；每組於隧道口設 30 mm（手部檢知）光幕（SF7）：所需 S = 528 mm（ISO 13855，T = 0.25 s），可用 970 mm — 多光束光幕（1250 mm）無法容納。
+2 僅於該組某通道移動訂單箱時遮蔽；通道僅於分揀工具離開通道區時移動（驗證分揀機器人下方通道移動 0 次）。
+3 低扭力 MDR 滾輪並設捲入防護；操作員僅於外側停止位取放訂單箱。</td><td>SF7 put-wall curtains + lane interlock 放置牆光幕＋通道互鎖 · PLr d → PL d</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H8</td><td>揀貨迴路 · 區段輸送機、料箱停止器、直角移載</td><td>清除卡料時手於料箱與停止器／直角移載間夾壓、滾輪與鏈條捲入；夾爪在料箱內時料箱移動</td><td class="c M">嚴重 · 不太可能<br>中</td><td class="pre">1 位於防護區內：防護停止時所有輸送驅動 STO（SF1）；僅經鎖定之門清除卡料。
+2 料箱僅於夾爪離開後離開停止位，且僅於停止位淨空時通過（驗證夾爪下方料箱移動 0 次）。
+3 MDR 區段輸送（24 V、低扭力），鏈條輸送頭與直角移載設捲入防護。</td><td>SF1 guard stop 防護停止 · PLr d → PL d</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H9</td><td>物品輸送帶、條碼門架、3D 相機</td><td>輸送帶滾筒捲入點；於門架處伸手取卡住之紙箱；條碼讀取器雷射等級與結構光 3D 投影器（眼睛）</td><td class="c M">中度 · 可能<br>中</td><td class="pre">1 位於防護區內、滾筒防護、防護停止時輸送帶 STO；夾爪放置或取件時輸送帶保持（驗證夾爪下方輸送帶移動 0 次）。
+2 條碼讀取器雷射等級 1／2，3D 投影器依 IEC 62471 屬豁免／RG1，安裝於頭部高度以上並朝下。</td><td>—</td><td class="c N">中度 · 極少<br>可忽略</td></tr>
+      <tr><td class="c">H10</td><td>例外滑槽（東側）· 無法讀取之紙箱送至外部料盒</td><td>經滑槽口（0.34 × 0.30 m）伸手至輸送帶尾滾筒或 S2；料盒滿載使輸送帶停止</td><td class="c M">嚴重 · 不太可能<br>中</td><td class="pre">1 經東側圍籬密封板之有蓋滑槽，出口距圍籬外 0.9 m：輸送帶尾滾筒距出口 ≥ 0.9 m，S2 ≥ 1.4 m（ISO 13857 表 4，≥ 850 mm）。
+2 料盒滿載感測器：輸送帶於尾端前保持（滑槽上不留紙箱）；包裝作業員清空料盒（重新掃描／歸位），驗證無法讀取率 5 % 時每小時 26 件例外，輸送帶停止不超過 42 s。</td><td>—</td><td class="c N">中度 · 極少<br>可忽略</td></tr>
+      <tr><td class="c">H11</td><td>人工搬運 · 補貨、訂單箱更換、例外料盒</td><td>重複將紙箱（≤ 1.6 kg）放入料箱、滿載訂單箱（≤ 8 kg）放上包裝推車、由供箱推車取空箱；於補貨停止位伸入料箱之不良姿勢</td><td class="c M">中度 · 可能<br>中</td><td class="pre">1 料箱不需搬抬：於停止位高度 0.75 m 原位補貨，以按鈕放行；庫存棧板置於停止位旁。
+2 於通道外側停止位 0.58–0.80 m 取箱，推車位於走道旁；每小時 194–245 張訂單時包裝作業員稼動 77–93 % — 超過每小時 240 箱時增加一名作業員或出箱輸送機。
+3 質量依 ISO 11228-1（紙箱 ≤ 1.6 kg、訂單箱 ≤ 8 kg）；補貨與包裝輪調。</td><td>—</td><td class="c L">中度 · 不太可能<br>低</td></tr>
+      <tr><td class="c">H12</td><td>圍籬外走道 · 作業員、推車</td><td>於放置牆、補貨站與例外料盒周圍走道滑倒／絆倒、與推車碰撞</td><td class="c L">中度 · 不太可能<br>低</td><td class="pre">1 於圍籬外 0.3–1.0 m 標示走道；推車與棧板置於其旁之標示位置；作業員身體距所有設備投影 ≥ 0.22 m（驗證重疊 0 次）。
+2 整理整頓；走道地面無電纜（所有地面線槽位於圍籬內）。
+1 走道與車道中之電氣設施：見 H18。</td><td>—</td><td class="c N">中度 · 極少<br>可忽略</td></tr>
+      <tr><td class="c">H13</td><td>真空夾爪 · 失去吸附</td><td>斷電或斷氣時紙箱（≤ 1.6 kg）由 R2／R3／S1／S2 掉落於輸送帶、料箱或訂單箱上</td><td class="c N">輕微 · 不太可能<br>可忽略</td><td class="pre">1 真空產生器具止回閥與真空開關；紙箱僅於圍籬內 ≤ 1.28 m 高度搬運。
+2 掉落之紙箱於區域停止後移除（H8）；搬運中紙箱下方無人。</td><td>—</td><td class="c N">輕微 · 極少<br>可忽略</td></tr>
+      <tr><td class="c">H14</td><td>維修、教導（T1）、高處料架作業</td><td>於圓環內高處作業（最高層 2.9 m、框架 3.75 m）進行料架或料箱維修；教導料位時 T1 機器人動作；意外啟動</td><td class="c M">嚴重 · 不太可能<br>中</td><td class="pre">1 高處作業於工作站 LOTO 下經北側通道使用移動式升降平台（EN 280）或由外部進行；R1 停放於原點姿態並施加剎車。
+2 以三段式致能裝置於 T1 ≤ 250 mm/s 教導，圓環內僅一人，SafeMove 區域啟用。
+3 主開關與氣源 LOTO（EN 1037／ISO 14118）。</td><td>—</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H15</td><td>儲存貨物之火載量</td><td>塑膠料箱與紙箱（約 120 個料箱＋訂單箱，約 1.5 t PP 與紙板）於圍籬內 3.75 m 圓環中；火勢蔓延、煙霧</td><td class="c M">災難性 · 極少<br>中</td><td class="pre">1 依現場評估之消防（圓環上方灑水，EN 12845／NFPA 13），圓環內無點火源（電纜於線槽內、驅動器位於外部），門旁設滅火器。
+2 門可由內部免工具開啟（防護鎖之逃生解鎖）；兩扇門皆設緊急停止。</td><td>—</td><td class="c M">災難性 · 極少<br>中</td></tr>
+      <tr><td class="c">H16</td><td>訂單正確性（品質，非安全）</td><td>訂單箱內紙箱錯誤或缺少：條碼無法讀取、料箱存入錯誤料位、一次吸取兩個紙箱</td><td class="c L">輕微 · 可能<br>低</td><td class="pre">1 每一紙箱於門架讀取；無法讀取 → 例外料盒（絕不放入訂單箱），未完成數量重新揀取；貨叉讀取料箱條碼（每次搬移更新料位庫存）。
+2 每列吸盤設真空開關；訂單完成後通道方放行。</td><td>—</td><td class="c N">輕微 · 極少<br>可忽略</td></tr>
+      <tr><td class="c">H17</td><td>電纜路徑 · 線槽、線管、地面線槽</td><td>電氣／火災 · 電纜絕緣受損 — 遭車輛或棧板壓損、被運動設備割傷、遭機器人撞擊、於過滿線槽內過熱 → 裸露導體觸電、安全訊號喪失、火災</td><td class="c H">嚴重 · 可能<br>高</td><td class="pre">1 電櫃、接線盒與機器人間所有電纜敷設於穿孔或梯式線槽（IEC 61537），高度 ≥ 2.2 m，跨越交通處為車輛／貨物高度＋0.2 m（無車道；圍籬外走道上方線槽高 2.4 m；補貨隧道與放置牆隧道上方為梯式線槽（隧道或通道內無立柱）；R1 電纜經圓筒北側通道並繞基座（兩台圓環掃描器）之地面線槽，R2／R3／S1／S2 由北側主線槽經短地面線槽，相機柱由南側主線槽）；機器人電纜之地面線槽僅限防護區內，且不得橫越物流路徑或車道；感測器電纜（≤ 10 m）敷設於圍籬橫桿線槽及設備框架內 — 無懸空電纜，亦不橫越輸送帶、車道或門道；線槽填充率 ≤ 40 %（最大 24 %）。
+2 機器人手臂、工具與搬運物於整個週期內與所有線槽、支架、垂直線槽及電櫃保持 ≥ 0.37 m（已於數位佈局驗證）；安全訊號具交叉故障偵測（ISO 13849-2）；保護接地連續性與絕緣測試（IEC 60204-1 §18）。
+3 線槽、地面線槽與感測器電纜納入檢查計畫；損壞電纜更換而非修補。</td><td>—</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H18</td><td>走道與車道中之電氣設施</td><td>機械性 · 絆倒於地面線槽；人員或車輛撞擊線槽立柱或接線盒立柱；線槽段遭車輛撞擊或過載後掉落；櫃門無法完全開啟（逃生受阻）</td><td class="c M">嚴重 · 不太可能<br>中</td><td class="pre">1 線槽支撐：落地支架立柱具錨定底板、橫臂與斜撐，間距 ≤ 2.0 m，跨距 ≤ 2.5 m（穿孔線槽）／≤ 6 m（跨越車道、門及機器之梯式線槽）；立柱、接線盒立柱不得位於車道（車道 = 車輛＋貨物）、門扇迴轉範圍、電櫃維修區或物流路徑內，不得位於圍籬線上或距機器人基座 0.9 m 內（佈局中已配置並檢查 31 支立柱）；地面線槽具黃色斜坡，僅設於工作站內，不得位於門道或走道。
+2 維修區保持淨空並於地面標示。
+3 鄰近交通之立柱以黃黑標示；安裝時及檢查計畫中確認線槽荷重與錨定。</td><td>—</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+      <tr><td class="c">H19</td><td>電櫃 · MCP、子盤、機器人控制櫃（圍籬外）</td><td>電氣 · 電櫃觸電、電弧（400 V）</td><td class="c M">嚴重 · 不太可能<br>中</td><td class="pre">1 單一主控制盤（MCP：電源進線、可上鎖主開關、產線 PLC＋安全 PLC、配電）；所有電櫃皆位於防護區外（MCP、RC1（OmniCore V250XT，R1）與 SC1（輸送控制）位於工作站南側，櫃門朝南；RC2（4 × OmniCore C30，R2／R3／S1／S2）位於北側圓筒通道旁，櫃門朝北）；符合 IEC 60204-1／IEC 61439 之 IP54 櫃體，門連鎖主開關；現場元件經 9 個接線盒以 24 V 供電，接線盒於電纜可及處一律設於圍籬外（維修無需進入區域）。
+2 每一櫃門前保留淨空維修區 — 深度 ≥ max(1.0 m, 門扇寬＋0.5 m 逃生寬度)，區內不得有圍籬、設備、車道、門扇迴轉範圍或其他電櫃（IEC 60364-7-729；佈局中 4 / 4 淨空）；電櫃、接線盒與機器人間所有電纜皆敷設於有支撐之線槽（H17）。
+3 僅限合格人員（EN 50110-1）；主開關 LOTO；警示標籤；依現場評估穿戴電弧防護具。</td><td>—</td><td class="c L">嚴重 · 極少<br>低</td></tr>
+    </table>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">5 · 首輪防護後仍為高風險之項目 — 討論與處理</h2>
+      <table>
+        <tr><th>項目</th><th>發現</th><th>採用之處理</th></tr>
+        <tr><td><b>H2</b></td><td>影片中 IRB 1200 揀貨機器人與 IRB 360 分揀機器人位於開放走道旁，未見防護；料架機器人僅由料架包圍。</td><td>整個系統為單一防護區；唯一物料介面為補貨隧道（多光束、遮蔽）、8 條放置牆通道（30 mm 光幕、遮蔽）與有蓋例外滑槽 — 作業員僅於外部作業。</td></tr>
+        <tr><td><b>H1</b></td><td>初版 R1 工具：側向法蘭上之水平貨叉（側向模式）使手腕於中段層位進入 A5 = 0 奇異點 — 每次搬移料箱 A4／A6 約轉一圈（1 h 內 A6 範圍 18 000°）。</td><td>向下法蘭下之 L 形貨叉（立柱 0.3 m，料箱中心在 TCP 前 0.55 m）：4 × 1 h A4 0°、A6 ±23°、A5 −2…126°，8 層皆可達。</td></tr>
+        <tr><td><b>H1</b></td><td>最上層：初版貨叉偏移（0.45 m）時 R1 手腕位於料架面（r 2.0 m）並升至頂部環樑（3.35 m）。</td><td>貨叉偏移 0.55 m（手腕在料架面內 0.1 m），頂部環樑升至 3.75 m：服務欄位外手臂於料架面內 ≥ 0.02 m，料架接觸 0 次。</td></tr>
+        <tr><td><b>H2</b></td><td>R2／R3 位於料箱停止位（南）與物品輸送帶（北）之間：直線移動越過自身基座（前 120 s 可達性失敗 94 次）。</td><td>基座轉向（A1 = 0 朝西），料箱 ↔ 輸送帶移動一律經西側 r ≥ 0.6 m 迴轉：可達性失敗 0 次，R2 ↔ R3 ≥ 0.33 m。</td></tr>
+        <tr><td><b>H2</b></td><td>S1 以 r 0.75 m 弧線擺向最遠放置牆通道：連桿 2 距放置牆罩 0.016 m。</td><td>分揀弧線距基座 ≤ 0.62 m：S1／S2 距罩 ≥ 0.058 m，S1 ↔ S2 ≥ 0.25 m。</td></tr>
+        <tr><td><b>H7</b></td><td>放置牆隧道口若用多光束（全身）光幕需 S = 1250 mm；至分揀吸盤僅有 970 mm。</td><td>隧道口限制為 0.37 × 0.30 m（無法全身進入），以 30 mm 手部檢知光幕防護：S = 528 mm ≤ 970 mm。</td></tr>
+        <tr><td><b>H9</b></td><td>電纜稽核：條碼門架柱上側向讀取器電纜距 S1 搬運之紙箱 0.043 m。</td><td>門架上游移 0.2 m（x 6.35 m）：電纜水平段／上升段距工具或搬運件 0.05 m 內 0 處，最小 0.091 m。</td></tr>
+        <tr><td><b>H8</b></td><td>料箱路由：料箱抵達判斷點時即選擇停止位，P2 尚在清空時多數料箱送往 P1 — R3 稼動 3 %，料箱於 P1 後排隊。</td><td>於料箱可離開判斷點（P1 淨空）時選擇停止位：除非已有料箱在／前往 P2，否則送 P2 — R2／R3 稼動 43／40 %，夾爪下方料箱移動 0 次，4 × 1 h 無停滯。</td></tr>
+        <tr><td><b>H18</b></td><td>第一版電氣規劃：每一輸送區段一個驅動＋一個感測器使 12 埠之 JP1／JP2／JR1 分別連接 13／22／23 個元件；R1 基座上兩台掃描器無電纜載體，之後感測器電纜達 10.3／11.9 m。</td><td>區段控制卡（每卡兩個 MDR 區段）且料箱感測器僅設於判斷點，增設第二個補貨接線盒（JR2），R1 地面線槽延伸繞過基座並於北側圍籬通道旁設 JC1：0 項問題，9 個接線盒共 84 個元件，最長感測器電纜 9.4 m。</td></tr>
+        <tr><td><b>H2</b></td><td>RC2 位於工作站南側：R2／R3 本體電纜 30.4／31.9 m（&gt; 30 m）且其維修區位於南門迴轉範圍內；北側主線槽於放置牆隧道上方有 3.9 m 無支撐跨距，JN1／JN2 距主線槽 0.8 m。</td><td>RC2 移至北側圓筒通道旁（本體電纜 6.2／7.7／11.0／15.4 m），放置牆隧道上方 4 m 梯式線槽，JN1／JN2 位於主線槽上距 S1／S2 地面線槽上升處 0.35 m：機器人與電氣設施 ≥ 0.37 m。</td></tr>
+      </table>
+      <div><b>結果：</b>無殘餘「高」風險。H1、H3、H5、H15 維持「中」（災難性嚴重度、極少機率）— 為料架機器人與 3.75 m 儲存圓環固有，僅在 SF1–SF7（PL d／e）已實施、驗證並文件化且料架依 EN 15512／EN 15635 設計與檢查時可容忍；H11 維持「低」（人工搬運，中度／不太可能）；其餘危害皆為「低」或「可忽略」。 電氣規劃（RevA）：所有電櫃位於防護區外並具淨空維修區（4 / 4），所有電纜敷設於有支撐之線槽、線管與地面線槽，不橫越物流路徑或車道；新增 H17, H18, H19（電纜損傷、走道與車道中之電氣設施、電櫃）— 採取措施後為「低」；規劃中發現 2 項問題已處理並納入 3D 佈局。</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h2 style="margin: 0; font-size: 14px;">6 · 安全功能總表（ISO 13849-1）</h2>
+      <table>
+        <tr><th>SF</th><th>功能</th><th>輸入 → 邏輯 → 輸出</th><th>PLr</th><th>PL</th></tr>
+        <tr><td>SF1</td><td>工作站防護停止</td><td>北側＋南側門（防護鎖）與 9 台 OS32C → 安全 PLC → R1、R2、R3、S1、S2 SafeStop cat. 1（OmniCore SafeMove），所有輸送／通道／輸送帶驅動 STO</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF2</td><td>SafeMove 區域與工具速度</td><td>每台機器人 Safe Zone（R1 圓環內部＋埠口輸送頭；R2／R3 揀貨區；S1／S2 輸送帶＋自身通道端），自動時工具速度監視 2.5／2.2／2.5 m/s，T1 250 mm/s</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF3</td><td>工作站門防護鎖</td><td>D4SL-N 僅於五台機器人 SafeMove Stand Still 且所有驅動 STO 時解鎖；內側設逃生解鎖；進入圓環時個人掛鎖</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF4</td><td>復歸／防止重啟（圓環內部）</td><td>僅於南門 HMI 復歸；任一掃描器防護區有人時拒絕 — 包含 R1 基座上監視被料架遮蔽之圓環內部的兩台</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF5</td><td>緊急停止</td><td>7 處緊急停止（兩扇門、補貨站、放置牆 × 2、例外滑槽、西南角）→ 安全 PLC → 機器人 cat. 1、所有驅動 STO</td><td class="c">d</td><td class="c">e</td></tr>
+        <tr><td>SF6</td><td>補貨隧道光幕與遮蔽</td><td>隧道口 F3SG-PG 多光束光幕，僅於料箱通過時由兩個料箱感測器遮蔽（≤ 4 s，遮蔽指示燈）；其他時候遮斷 → R1 cat. 1＋補貨迴路 STO</td><td class="c">d</td><td class="c">d</td></tr>
+        <tr><td>SF7</td><td>放置牆光幕與通道互鎖</td><td>每 4 條通道一組 F3SG-PG 30 mm 光幕，僅於該組通道移動訂單箱時遮蔽；僅於 SafeMove「分揀工具離開通道區」時致能通道驅動；遮斷 → S1／S2 cat. 1＋通道 STO</td><td class="c">d</td><td class="c">d</td></tr>
+      </table>
+      <h2 style="margin: 8px 0 0; font-size: 14px;">7 · 放行前驗證</h2>
+      <div>數位佈局（stations/logistics_application/verify.js，4 × 1 h）：可達性失敗 0、A1 繞轉 0、R1 A4 0°／A6 ±23°、資源最長等待 8 s、最長無分揀紙箱時間 42 s；夾爪位於 3D 視野時拍攝 0 次、夾爪下方料箱移動 0 次、放置／取件夾爪下方輸送帶移動 0 次、分揀機器人下方通道移動 0 次；機器人間 ≥ 0.25 m、機器人與固定設備 ≥ 0.058 m、R1 料架接觸 0 次、服務欄位外手臂於料架面內 ≥ 0.02 m、搬運料箱與埠口輸送頭接觸 0 次；紙箱與料箱守恆、無訂單超量分揀。 · 安全功能 SF1–SF7：依 ISO 13849-2（SISTEMA）驗證 PL；逐一功能測試各門、掃描器防護區（coverage.py 100 %，含 R1 基座監視之圓環內部）、緊急停止、兩種遮蔽順序（料箱／訂單箱通過、無通過時遮斷）、通道互鎖；以 ABB 停止資料量測光幕距離（ISO 13855：補貨 1730 ≤ 1850 mm、放置牆 528 ≤ 970 mm）。 · 料架：各層載重測試、地錨扭力、垂直／水平公差（EN 15620）；於每一層以滿載料箱測試貨叉料箱感測器與後擋 · 於降速自動下量測機器人停止距離並與 ABB 資料比較；以最重紙箱測試斷氣時真空保持 · 數位佈局電氣檢查（engine/tools/verify_electrical.js）：0 項問題 — 所有接線盒、電櫃與機器人皆連接線槽路徑、接線盒埠數、感測器電纜 ≤ 10 m 且沿載體敷設、填充率 ≤ 40 %、維修區淨空、跨距 ≤ 2.5 m／6 m、無地面線槽或感測器電纜橫越物流路徑或車道；機器人與電氣設施間隙 ≥ 0.3 m（實測 0.37 m） · 現場：IEC 60204-1 §18 測試（保護接地連續性、絕緣電阻、耐壓、殘餘電壓）；維修區淨空並標示；線槽支撐錨定並確認荷重；以實際車輛與貨物量測各車道上方線槽淨高</div>
+    </div>
+  </div>
+  <div style="border-top: 1px solid #c9ced3; padding-top: 8px; color: #6b7780; font-size: 11px;">依本畫布之數位佈局（Main 頁面）編製。位置以機器人基座為原點（公尺）。[ ] 內數值待依供應商文件填入。本評估不取代整合商之技術文件。</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1200,"height":2600}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

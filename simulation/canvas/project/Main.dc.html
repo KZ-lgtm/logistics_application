@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <script src="three.min.js"></script>
+  <script src="robot_glb.js"></script>
+  <script src="station_ui.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #14181d; color: #e8ecef; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; line-height: 1.4; overflow: hidden; }
+    a { color: #ff8a45; } a:hover { color: #ffa36b; }
+    #view { width: 100%; height: 100%; display: block; touch-action: none; }
+    #steps li.active { color: #e8ecef; background: rgba(255,106,19,.14); border-color: rgba(255,106,19,.5); }
+    #steps li.active b { background: #ff6a13; }
+    .hud-sub.wait { color: #ffb020; font-weight: 600; }
+    #tcp-bar.slow { background: #ffb020; }
+    #locks span.ok { background: rgba(53,194,107,.16); color: #8ee7ae; }
+    #locks span.bad { background: rgba(255,77,77,.16); color: #ff9a9a; }
+    .cell-btn:hover { border-color: #4a5561; }
+    .ib:hover { background: #2c343c; color: #e8ecef; }
+    input[type=range] { accent-color: #ff6a13; }
+    [data-rc-body] { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #4a5561 transparent; }
+    [data-rc-panel="hdr"] { max-height: var(--rc-max-hdr, calc(100vh - 28px)); }
+    [data-rc-panel="metrics"] { max-height: var(--rc-max-metrics, calc(100vh - 28px)); }
+    [data-rc-panel="ctrl"] { max-height: var(--rc-max-ctrl, 50vh); }
+  </style>
+</helmet>
+<div style="position: relative; width: 100%; height: 100vh; min-height: 360px; background: #14181d; overflow: hidden;">
+  <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;"><canvas id="view"></canvas></div>
+
+  <section data-rc-panel="hdr" style="position: absolute; left: 14px; top: 14px; width: 330px; background: rgba(20,24,29,.86); border: 1px solid #2c343c; border-radius: 10px; padding: 12px 14px; display: {{panel_hdr}}; flex-direction: column; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: -4px -6px 0 0;"><span data-i18n="Process" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Process</span><span style="display: flex; gap: 2px;"><button class="ib" onClick="{{ collapse_hdr }}" aria-label="{{chevLabel_hdr}}" style="width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #9aa4ad; cursor: pointer;"><span style="display: inline-flex; transform: rotate({{chev_hdr}}deg);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span></button><button class="ib" onClick="{{ hide_hdr }}" aria-label="Hide" style="width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #9aa4ad; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+    <div data-rc-body="1" style="display: {{body_hdr}}; flex-direction: column; gap: 8px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <h1 data-i18n="Logistics application · cylinder ASRS → 3D vision picking → bar-code sortation into order cases · IRB 6700 + 2 × IRB 1300 + 2 × IRB 930" style="margin: 0; font-size: 16px; letter-spacing: .2px;">Logistics application · cylinder ASRS → 3D vision picking → bar-code sortation into order cases · IRB 6700 + 2 × IRB 1300 + 2 × IRB 930</h1>
+      <div data-i18n="Orders on the put wall → R1 retrieves the bin from the cylinder shelf → picking loop → R2 / R3 pick with 3D vision onto the item belt → bar-code arch → S1 / S2 put into the order case → case out to packing · bins back to the shelf, empty bins to restock" style="color: #9aa4ad; font-size: 12px;">Orders on the put wall → R1 retrieves the bin from the cylinder shelf → picking loop → R2 / R3 pick with 3D vision onto the item belt → bar-code arch → S1 / S2 put into the order case → case out to packing · bins back to the shelf, empty bins to restock</div>
+    </div>
+    <ol id="steps" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px;">
+      <li id="step-1" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">1</b><span data-i18n="Rolling waves: each of the 8 put-wall lanes with an empty case takes the next order; the WMS adds up the open lines of all active orders per SKU">Rolling waves: each of the 8 put-wall lanes with an empty case takes the next order; the WMS adds up the open lines of all active orders per SKU</span></li>
+      <li id="step-2" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">2</b><span data-i18n="R1 (IRB 6700, fork) retrieves a bin of the next open SKU from the cylinder shelf (26 columns × 8 levels, 144 slots) and sets it on the picking loop">R1 (IRB 6700, fork) retrieves a bin of the next open SKU from the cylinder shelf (26 columns × 8 levels, 144 slots) and sets it on the picking loop</span></li>
+      <li id="step-3" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">3</b><span data-i18n="The bin runs through the east port to stop P2 (or P1 while P2 is busy); a bin without open demand runs straight back">The bin runs through the east port to stop P2 (or P1 while P2 is busy); a bin without open demand runs straight back</span></li>
+      <li id="step-4" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">4</b><span data-i18n="R2 / R3 (IRB 1300, 4-cup vacuum) pick the cartons of every active order for that SKU — the 3D camera images the bin before each pick">R2 / R3 (IRB 1300, 4-cup vacuum) pick the cartons of every active order for that SKU — the 3D camera images the bin before each pick</span></li>
+      <li id="step-5" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">5</b><span data-i18n="Cartons go onto the item belt into a free gap (the belt holds while the gripper is down); the bar-code arch reads each carton (no-read → exception tote)">Cartons go onto the item belt into a free gap (the belt holds while the gripper is down); the bar-code arch reads each carton (no-read → exception tote)</span></li>
+      <li id="step-6" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">6</b><span data-i18n="S1 / S2 (IRB 930) take their cartons at the belt stop and put them into the order case on the put-wall lane">S1 / S2 (IRB 930) take their cartons at the belt stop and put them into the order case on the put-wall lane</span></li>
+      <li id="step-7" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">7</b><span data-i18n="The bin returns on the inner lane; R1 stores it in the nearest free slot (dynamic slotting) — returns before retrievals">The bin returns on the inner lane; R1 stores it in the nearest free slot (dynamic slotting) — returns before retrievals</span></li>
+      <li id="step-8" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">8</b><span data-i18n="Empty bins go out through the west port to the restock operator (refill, push-button) and come back in to be stored">Empty bins go out through the west port to the restock operator (refill, push-button) and come back in to be stored</span></li>
+      <li id="step-9" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">9</b><span data-i18n="Finished order: the case runs out through the tunnel to the packing operator, an empty case runs in and the lane takes the next order">Finished order: the case runs out through the tunnel to the packing operator, an empty case runs in and the lane takes the next order</span></li>
+      <li id="step-10" style="display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; color: #9aa4ad; border: 1px solid transparent;"><b style="display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #2c343c; color: #e8ecef; font-size: 11px; align-items: center; justify-content: center; flex: none;">10</b><span data-i18n="Safety: one guarded zone, guard-locked doors north (cylinder passage) / south, 9 × OS32C restart prevention, muted curtains at the restock and put-wall tunnels">Safety: one guarded zone, guard-locked doors north (cylinder passage) / south, 9 × OS32C restart prevention, muted curtains at the restock and put-wall tunnels</span></li>
+    </ol>
+    <div style="padding-top: 8px; border-top: 1px solid #2c343c; display: flex; flex-direction: column; gap: 2px;"><div data-i18n="R1 · cylinder shelf (fork)" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #ff8a45;">R1 · cylinder shelf (fork)</div><div id="hud-status" style="font-weight: 600; font-size: 14px;">Starting</div><div id="hud-sub" class="hud-sub" style="color: #9aa4ad; font-size: 12px;">loading model</div></div>
+    <div style="padding-top: 8px; border-top: 1px solid #2c343c; display: flex; flex-direction: column; gap: 2px;"><div data-i18n="R2 · picking P1 (3D vision)" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #ff8a45;">R2 · picking P1 (3D vision)</div><div id="hud-status-r2" style="font-weight: 600; font-size: 14px;">Starting</div><div id="hud-sub-r2" class="hud-sub" style="color: #9aa4ad; font-size: 12px;">loading model</div></div>
+    <div style="padding-top: 8px; border-top: 1px solid #2c343c; display: flex; flex-direction: column; gap: 2px;"><div data-i18n="R3 · picking P2 (3D vision)" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #ff8a45;">R3 · picking P2 (3D vision)</div><div id="hud-status-r3" style="font-weight: 600; font-size: 14px;">Starting</div><div id="hud-sub-r3" class="hud-sub" style="color: #9aa4ad; font-size: 12px;">loading model</div></div>
+    <div style="padding-top: 8px; border-top: 1px solid #2c343c; display: flex; flex-direction: column; gap: 2px;"><div data-i18n="S1 · sortation, lanes S1-1…4" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #ff8a45;">S1 · sortation, lanes S1-1…4</div><div id="hud-status-s1" style="font-weight: 600; font-size: 14px;">Starting</div><div id="hud-sub-s1" class="hud-sub" style="color: #9aa4ad; font-size: 12px;">loading model</div></div>
+    <div style="padding-top: 8px; border-top: 1px solid #2c343c; display: flex; flex-direction: column; gap: 2px;"><div data-i18n="S2 · sortation, lanes S2-1…4" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #ff8a45;">S2 · sortation, lanes S2-1…4</div><div id="hud-status-s2" style="font-weight: 600; font-size: 14px;">Starting</div><div id="hud-sub-s2" class="hud-sub" style="color: #9aa4ad; font-size: 12px;">loading model</div></div>
+    </div>
+  </section>
+
+  <section data-rc-panel="metrics" style="position: absolute; right: 14px; top: 14px; width: 300px; background: rgba(20,24,29,.86); border: 1px solid #2c343c; border-radius: 10px; padding: 12px 14px; display: {{panel_metrics}}; flex-direction: column; gap: 3px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: -4px -6px 0 0;"><span data-i18n="Metrics" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Metrics</span><span style="display: flex; gap: 2px;"><button class="ib" onClick="{{ collapse_metrics }}" aria-label="{{chevLabel_metrics}}" style="width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #9aa4ad; cursor: pointer;"><span style="display: inline-flex; transform: rotate({{chev_metrics}}deg);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span></button><button class="ib" onClick="{{ hide_metrics }}" aria-label="Hide" style="width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #9aa4ad; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+    <div data-rc-body="1" style="display: {{body_metrics}}; flex-direction: column; gap: 3px;">
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Sim time" style="color: #9aa4ad;">Sim time</span><span id="m-time" style="font-variant-numeric: tabular-nums; text-align: right;">0.0 s</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Output" style="color: #9aa4ad;">Output</span><span id="m-rate" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Orders" style="color: #9aa4ad;">Orders</span><span id="m-orders" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Demand" style="color: #9aa4ad;">Demand</span><span id="m-demand" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Bin presentations" style="color: #9aa4ad;">Bin presentations</span><span id="m-bins" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Cylinder shelf" style="color: #9aa4ad;">Cylinder shelf</span><span id="m-rack" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="R1 · shelf robot" style="color: #9aa4ad;">R1 · shelf robot</span><span id="m-r1" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="R2 / R3 · picking" style="color: #9aa4ad;">R2 / R3 · picking</span><span id="m-pick" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="3D images" style="color: #9aa4ad;">3D images</span><span id="m-cam" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="S1 / S2 · sortation" style="color: #9aa4ad;">S1 / S2 · sortation</span><span id="m-sort" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Item belt" style="color: #9aa4ad;">Item belt</span><span id="m-belt" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Put-wall lanes" style="color: #9aa4ad;">Put-wall lanes</span><span id="m-lanes" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Bar code · exceptions" style="color: #9aa4ad;">Bar code · exceptions</span><span id="m-exc" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Restock" style="color: #9aa4ad;">Restock</span><span id="m-rst" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Restock operator" style="color: #9aa4ad;">Restock operator</span><span id="m-op1" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Packing operator" style="color: #9aa4ad;">Packing operator</span><span id="m-op2" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="R1 · cylinder shelf (fork)" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">R1 · cylinder shelf (fork)</h2>
+    <h2 id="h-vmax" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}' style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP speed" style="color: #9aa4ad;">TCP speed</span><span id="m-tcpv" style="font-variant-numeric: tabular-nums; text-align: right;">0 mm/s</span></div>
+    <div style="height: 6px; background: #2c343c; border-radius: 3px; overflow: hidden; margin: 4px 0 8px;"><i id="tcp-bar" style="display: block; height: 100%; width: 0; background: #ff6a13;"></i></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Joints" style="color: #9aa4ad;">Joints</span><span id="m-q" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP" style="color: #9aa4ad;">TCP</span><span id="m-tcp" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Last cycle" style="color: #9aa4ad;">Last cycle</span><span id="m-cycle" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="R2 · picking P1 (3D vision)" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">R2 · picking P1 (3D vision)</h2>
+    <h2 id="h-vmax-r2" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}' style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP speed" style="color: #9aa4ad;">TCP speed</span><span id="m-tcpv-r2" style="font-variant-numeric: tabular-nums; text-align: right;">0 mm/s</span></div>
+    <div style="height: 6px; background: #2c343c; border-radius: 3px; overflow: hidden; margin: 4px 0 8px;"><i id="tcp-bar-r2" style="display: block; height: 100%; width: 0; background: #ff6a13;"></i></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Joints" style="color: #9aa4ad;">Joints</span><span id="m-q-r2" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP" style="color: #9aa4ad;">TCP</span><span id="m-tcp-r2" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Last cycle" style="color: #9aa4ad;">Last cycle</span><span id="m-cycle-r2" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="R3 · picking P2 (3D vision)" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">R3 · picking P2 (3D vision)</h2>
+    <h2 id="h-vmax-r3" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}' style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP speed" style="color: #9aa4ad;">TCP speed</span><span id="m-tcpv-r3" style="font-variant-numeric: tabular-nums; text-align: right;">0 mm/s</span></div>
+    <div style="height: 6px; background: #2c343c; border-radius: 3px; overflow: hidden; margin: 4px 0 8px;"><i id="tcp-bar-r3" style="display: block; height: 100%; width: 0; background: #ff6a13;"></i></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Joints" style="color: #9aa4ad;">Joints</span><span id="m-q-r3" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP" style="color: #9aa4ad;">TCP</span><span id="m-tcp-r3" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Last cycle" style="color: #9aa4ad;">Last cycle</span><span id="m-cycle-r3" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="S1 · sortation, lanes S1-1…4" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">S1 · sortation, lanes S1-1…4</h2>
+    <h2 id="h-vmax-s1" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}' style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP speed" style="color: #9aa4ad;">TCP speed</span><span id="m-tcpv-s1" style="font-variant-numeric: tabular-nums; text-align: right;">0 mm/s</span></div>
+    <div style="height: 6px; background: #2c343c; border-radius: 3px; overflow: hidden; margin: 4px 0 8px;"><i id="tcp-bar-s1" style="display: block; height: 100%; width: 0; background: #ff6a13;"></i></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Joints" style="color: #9aa4ad;">Joints</span><span id="m-q-s1" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP" style="color: #9aa4ad;">TCP</span><span id="m-tcp-s1" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Last cycle" style="color: #9aa4ad;">Last cycle</span><span id="m-cycle-s1" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="S2 · sortation, lanes S2-1…4" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">S2 · sortation, lanes S2-1…4</h2>
+    <h2 id="h-vmax-s2" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}' style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP speed" style="color: #9aa4ad;">TCP speed</span><span id="m-tcpv-s2" style="font-variant-numeric: tabular-nums; text-align: right;">0 mm/s</span></div>
+    <div style="height: 6px; background: #2c343c; border-radius: 3px; overflow: hidden; margin: 4px 0 8px;"><i id="tcp-bar-s2" style="display: block; height: 100%; width: 0; background: #ff6a13;"></i></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Joints" style="color: #9aa4ad;">Joints</span><span id="m-q-s2" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="TCP" style="color: #9aa4ad;">TCP</span><span id="m-tcp-s2" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Last cycle" style="color: #9aa4ad;">Last cycle</span><span id="m-cycle-s2" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="Safety" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Safety</h2>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Safety fence H{h}" data-i18n-args='{"h": 2000}' style="color: #9aa4ad;">Safety fence H{h}</span><span id="m-fence" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Safety door" style="color: #9aa4ad;">Safety door</span><span id="m-door" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Light curtain {m}" data-i18n-args='{"m": "F3SG-PG \u00d7 3 (restock tunnel multi-beam, put wall 30 mm; muted while a bin / case passes)"}' style="color: #9aa4ad;">Light curtain {m}</span><span id="m-curtain" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Laser scanner {m} ×{n}" data-i18n-args='{"m": "OS32C", "n": 9}' style="color: #9aa4ad;">Laser scanner {m} ×{n}</span><span id="m-scanner" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="Electrical" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Electrical</h2>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Main control panel" style="color: #9aa4ad;">Main control panel</span><span id="m-el-main" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Sub-cabinets / robot controllers" style="color: #9aa4ad;">Sub-cabinets / robot controllers</span><span id="m-el-cab" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Junction boxes · field devices" style="color: #9aa4ad;">Junction boxes · field devices</span><span id="m-el-jb" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Cable trays / floor trunks" style="color: #9aa4ad;">Cable trays / floor trunks</span><span id="m-el-tray" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Max tray fill (≤ 40 %)" style="color: #9aa4ad;">Max tray fill (≤ 40 %)</span><span id="m-el-fill" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Service areas clear" style="color: #9aa4ad;">Service areas clear</span><span id="m-el-svc" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Manipulator cables" style="color: #9aa4ad;">Manipulator cables</span><span id="m-el-rcab" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed #262d34;"><span data-i18n="Electrical check" style="color: #9aa4ad;">Electrical check</span><span id="m-el-check" style="font-variant-numeric: tabular-nums; text-align: right;">—</span></div>
+    <h2 data-i18n="Interlocks (collision avoidance)" style="margin: 8px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Interlocks (collision avoidance)</h2>
+    <div id="locks" style="display: flex; flex-direction: column; gap: 4px;">
+      <span id="il-zone" style="padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #2c343c;">Cell doors locked · running</span>
+      <span id="il-estop" style="padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #2c343c;">E-stop released</span>
+      <span id="il-image" style="padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #2c343c;">3D image: field of view clear</span>
+      <span id="il-binstop" style="padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #2c343c;">Bin stops: no bin moves under a gripper</span>
+      <span id="il-belt" style="padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #2c343c;">Item belt holds while a gripper places</span>
+      <span id="il-lanes" style="padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #2c343c;">Put-wall lanes move only with the sorter clear</span>
+      <span id="il-reach" style="padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #2c343c;">All robot TCPs within reach</span>
+    </div>
+    </div>
+  </section>
+
+  <section data-rc-panel="ctrl" style="position: absolute; left: 14px; bottom: 14px; max-width: calc(100% - 28px); background: rgba(20,24,29,.86); border: 1px solid #2c343c; border-radius: 10px; padding: 10px 14px; display: {{panel_ctrl}}; flex-direction: column; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: -4px -6px 0 0;"><span data-i18n="Controls" style="font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #9aa4ad;">Controls</span><span style="display: flex; gap: 2px;"><button class="ib" onClick="{{ collapse_ctrl }}" aria-label="{{chevLabel_ctrl}}" style="width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #9aa4ad; cursor: pointer;"><span style="display: inline-flex; transform: rotate({{chev_ctrl}}deg);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span></button><button class="ib" onClick="{{ hide_ctrl }}" aria-label="Hide" style="width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: transparent; border: 1px solid transparent; color: #9aa4ad; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+    <div data-rc-body="1" style="display: {{body_ctrl}}; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <button class="cell-btn" onClick="{{ toggleRun }}" style="background: {{runBg}}; color: #fff; border: 1px solid {{runBg}}; border-radius: 7px; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{runLabel}}</button>
+    <button class="cell-btn" onClick="{{ reset }}" style="background: #242b33; color: #e8ecef; border: 1px solid #2c343c; border-radius: 7px; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{resetLabel}}</button>
+    <label style="display: flex; align-items: center; gap: 8px; color: #9aa4ad;"><span data-i18n="Robot speed">Robot speed</span> <input type="number" min="10" max="100" step="5" value="{{num_speed}}" onChange="{{ onNum_speed }}" style="width: 68px; background: #242b33; color: #e8ecef; border: 1px solid #2c343c; border-radius: 6px; padding: 6px; font: inherit;"> %</label>
+    <label style="display: flex; align-items: center; gap: 8px; color: #9aa4ad;"><span data-i18n="Bar-code no-read">Bar-code no-read</span> <input type="number" min="0" max="20" step="0.5" value="{{num_no_read}}" onChange="{{ onNum_no_read }}" style="width: 68px; background: #242b33; color: #e8ecef; border: 1px solid #2c343c; border-radius: 6px; padding: 6px; font: inherit;"> %</label>
+    <label style="display: flex; align-items: center; gap: 8px; color: #9aa4ad;"><span data-i18n="Restock time per bin">Restock time per bin</span> <input type="number" min="5" max="300" step="5" value="{{num_refill_t}}" onChange="{{ onNum_refill_t }}" style="width: 68px; background: #242b33; color: #e8ecef; border: 1px solid #2c343c; border-radius: 6px; padding: 6px; font: inherit;"> s</label>
+    <label style="display: flex; align-items: center; gap: 8px; color: #9aa4ad;"><span data-i18n="Lines per order (max)">Lines per order (max)</span> <input type="number" min="1" max="6" step="1" value="{{num_lines_max}}" onChange="{{ onNum_lines_max }}" style="width: 68px; background: #242b33; color: #e8ecef; border: 1px solid #2c343c; border-radius: 6px; padding: 6px; font: inherit;"></label>
+    <label style="display: flex; align-items: center; gap: 8px; color: #9aa4ad;"><span data-i18n="Quantity per line (max)">Quantity per line (max)</span> <input type="number" min="1" max="5" step="1" value="{{num_qty_max}}" onChange="{{ onNum_qty_max }}" style="width: 68px; background: #242b33; color: #e8ecef; border: 1px solid #2c343c; border-radius: 6px; padding: 6px; font: inherit;"> pcs</label>
+    <label style="display: flex; align-items: center; gap: 8px; color: #9aa4ad;"><span data-i18n="Sim speed">Sim speed</span> <input type="range" min="0.25" max="8" step="0.25" value="{{speed}}" onInput="{{ onSpeed }}" style="width: 140px;"><span style="min-width: 40px;">{{speedLabel}}</span></label>
+    <div style="display: flex;" role="group" aria-label="Mode">
+      <button class="cell-btn" onClick="{{ onMode_zipf }}" style="background: {{modeBg_zipf}}; border-radius: 7px 0 0 7px; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{modeLabel_zipf}}</button>
+      <button class="cell-btn" onClick="{{ onMode_flat }}" style="background: {{modeBg_flat}}; border-radius: 0 7px 7px 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{modeLabel_flat}}</button>
+    </div>
+    <div style="display: flex;" role="group" aria-label="Simulated events">
+      <button class="cell-btn" onClick="{{ onTog_door }}" style="background: {{togBg_door}}; border-radius: 7px 0 0 7px; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{togLabel_door}}</button>
+      <button class="cell-btn" onClick="{{ onTog_estop }}" style="background: {{togBg_estop}}; border-radius: 0 7px 7px 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{togLabel_estop}}</button>
+    </div>
+    <div style="display: flex;" role="group" aria-label="Camera view">
+      <button class="cell-btn" onClick="{{ onView_iso }}" style="background: #242b33; border-radius: 7px 0 0 7px; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_iso}}</button>
+      <button class="cell-btn" onClick="{{ onView_top }}" style="background: #242b33; border-radius: 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_top}}</button>
+      <button class="cell-btn" onClick="{{ onView_front }}" style="background: #242b33; border-radius: 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_front}}</button>
+      <button class="cell-btn" onClick="{{ onView_cylinder }}" style="background: #242b33; border-radius: 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_cylinder}}</button>
+      <button class="cell-btn" onClick="{{ onView_picking }}" style="background: #242b33; border-radius: 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_picking}}</button>
+      <button class="cell-btn" onClick="{{ onView_sorting }}" style="background: #242b33; border-radius: 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_sorting}}</button>
+      <button class="cell-btn" onClick="{{ onView_putwall }}" style="background: #242b33; border-radius: 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_putwall}}</button>
+      <button class="cell-btn" onClick="{{ onView_restock }}" style="background: #242b33; border-radius: 0 7px 7px 0; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{viewLabel_restock}}</button>
+    </div>
+    <button class="cell-btn" onClick="{{ toggleScan }}" style="background: {{scanBg}}; border-radius: 7px; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{scanLabel}}</button>
+    <label style="display: flex; align-items: center; gap: 8px; color: #9aa4ad;"><span data-i18n="Opacity">Opacity</span> <input type="range" min="0" max="0.6" step="0.02" value="{{scanOp}}" onInput="{{ onScanOp }}" style="width: 90px;"></label>
+    <button class="cell-btn" onClick="{{ toggleElec }}" style="background: {{elecBg}}; border-radius: 7px; color: #e8ecef; border: 1px solid #2c343c; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">{{elecLabel}}</button>
+    <div style="display: flex;" role="group" aria-label="Language">
+      <button class="cell-btn" onClick="{{ langEn }}" style="background: {{enBg}}; color: #fff; border: 1px solid #2c343c; border-radius: 7px 0 0 7px; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">EN</button>
+      <button class="cell-btn" onClick="{{ langZh }}" style="background: {{zhBg}}; color: #fff; border: 1px solid #2c343c; border-radius: 0 7px 7px 0; padding: 8px 12px; font: inherit; cursor: pointer; min-height: 44px;">繁中</button>
+    </div>
+    </div>
+  </section>
+  <div data-rc-dock="1" style="position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px;">
+    <button class="cell-btn" onClick="{{ show_hdr }}" style="display: {{dock_hdr}}; min-height: 34px; padding: 6px 12px; font-size: 12px; background: rgba(20,24,29,.86); color: #e8ecef; border: 1px solid #2c343c; border-radius: 7px; cursor: pointer;"><span style="color: #ff6a13;">+ </span><span data-i18n="Process">Process</span></button>
+    <button class="cell-btn" onClick="{{ show_metrics }}" style="display: {{dock_metrics}}; min-height: 34px; padding: 6px 12px; font-size: 12px; background: rgba(20,24,29,.86); color: #e8ecef; border: 1px solid #2c343c; border-radius: 7px; cursor: pointer;"><span style="color: #ff6a13;">+ </span><span data-i18n="Metrics">Metrics</span></button>
+    <button class="cell-btn" onClick="{{ show_ctrl }}" style="display: {{dock_ctrl}}; min-height: 34px; padding: 6px 12px; font-size: 12px; background: rgba(20,24,29,.86); color: #e8ecef; border: 1px solid #2c343c; border-radius: 7px; cursor: pointer;"><span style="color: #ff6a13;">+ </span><span data-i18n="Controls">Controls</span></button>
+  </div>
+  <div data-i18n="Drag: orbit · Right-drag / Shift-drag: pan · Wheel: zoom" style="position: absolute; right: 14px; bottom: 14px; color: #9aa4ad; font-size: 11px;">Drag: orbit · Right-drag / Shift-drag: pan · Wheel: zoom</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const UI = window.STATION_UI || { controls: {} };
+    const numbers = {}; for (const n of UI.controls.numbers || []) numbers[n.id] = n.value;
+    const toggles = {}; for (const g of UI.controls.toggles || []) toggles[g.id] = !!g.on;
+    this.state = { running: true, mode: UI.controls.defaultMode || null, speed: 1, numbers, toggles, scanVisible: true, scanOp: 0.12, elecVisible: true,
+                   lang: (window.RobotCell && window.RobotCell.lang) || 'en', panels: {} };
+    try { this.state.panels = JSON.parse(localStorage.getItem('rc-panels') || '{}') || {}; } catch (e) { this.state.panels = {}; }
+  }
+  componentDidMount() {
+    const canvas = document.getElementById('view');
+    if (!canvas || !window.RobotCell || !window.THREE || !window.ROBOT_GLB_B64 || !window.STATION_UI) {
+      const el = document.getElementById('hud-status'); if (el) el.textContent = 'Support files not loaded';
+      return;
+    }
+    if (!window.RobotCell.started) { window.RobotCell.started = true; window.RobotCell.start({ canvas, glbB64: window.ROBOT_GLB_B64, glbs: window.ROBOT_GLBS, ui: window.STATION_UI }); }
+    this.setState({ lang: window.RobotCell.lang });
+  }
+  componentDidUpdate() {
+    if (window.RobotCell && window.RobotCell.applyLang) window.RobotCell.applyLang();
+    try { localStorage.setItem('rc-panels', JSON.stringify(this.state.panels)); } catch (e) {}
+  }
+  setPanel(key, val) { const panels = Object.assign({}, this.state.panels); panels[key] = val; this.setState({ panels }); }
+  renderVals() {
+    const RC = window.RobotCell || {}; const UI = window.STATION_UI || { controls: {} };
+    const s = this.state; const T = RC.t || (k => k);
+    const P = s.panels || {}; const vals = {};
+    for (const id of ['hdr', 'metrics', 'ctrl']) {
+      vals['panel_' + id] = P[id + '_h'] ? 'none' : 'flex'; vals['body_' + id] = P[id + '_c'] ? 'none' : 'flex';
+      vals['dock_' + id] = P[id + '_h'] ? 'inline-flex' : 'none'; vals['chev_' + id] = P[id + '_c'] ? 180 : 0;
+      vals['chevLabel_' + id] = T(P[id + '_c'] ? 'Expand' : 'Collapse');
+      vals['collapse_' + id] = () => this.setPanel(id + '_c', !P[id + '_c']);
+      vals['hide_' + id] = () => this.setPanel(id + '_h', true);
+      vals['show_' + id] = () => this.setPanel(id + '_h', false);
+    }
+    const hole = id => id.replace(/-/g, '_');           // hole names must be identifiers (no hyphens)
+    for (const n of UI.controls.numbers || []) {
+      vals['num_' + hole(n.id)] = s.numbers[n.id];
+      vals['onNum_' + hole(n.id)] = (e) => { const v = parseFloat(e.target.value); if (!(v > 0)) return; if (RC.setNumber) RC.setNumber(n.id, v); const numbers = Object.assign({}, s.numbers); numbers[n.id] = v; this.setState({ numbers }); };
+    }
+    for (const m of UI.controls.modes || []) {
+      vals['modeBg_' + hole(m.id)] = s.mode === m.id ? '#ff6a13' : '#242b33'; vals['modeLabel_' + hole(m.id)] = T(m.label);
+      vals['onMode_' + hole(m.id)] = () => { if (RC.setMode) RC.setMode(m.id); this.setState({ mode: m.id }); };
+    }
+    for (const v of UI.controls.views || []) { vals['viewLabel_' + hole(v.id)] = T(v.label); vals['onView_' + hole(v.id)] = () => RC.setView && RC.setView(v.id); }
+    for (const g of UI.controls.toggles || []) {
+      vals['togBg_' + hole(g.id)] = s.toggles[g.id] ? '#d8121c' : '#242b33'; vals['togLabel_' + hole(g.id)] = T(g.label);
+      vals['onTog_' + hole(g.id)] = () => { const on = !s.toggles[g.id]; if (RC.setToggle) RC.setToggle(g.id, on); const toggles = Object.assign({}, s.toggles); toggles[g.id] = on; this.setState({ toggles }); };
+    }
+    return Object.assign(vals, {
+      langEn: () => { if (RC.setLang) RC.setLang('en'); this.setState({ lang: 'en' }); },
+      langZh: () => { if (RC.setLang) RC.setLang('zh'); this.setState({ lang: 'zh' }); },
+      enBg: s.lang === 'zh' ? '#242b33' : '#ff6a13', zhBg: s.lang === 'zh' ? '#ff6a13' : '#242b33',
+      resetLabel: T('Reset'), runLabel: T(s.running ? 'Pause' : 'Run'), runBg: s.running ? '#ff6a13' : '#3a8f4a',
+      speed: s.speed, speedLabel: s.speed + '×',
+      scanLabel: T('Scan fields'), scanBg: s.scanVisible ? '#ff6a13' : '#242b33', scanOp: s.scanOp,
+      toggleScan: () => { const on = RC.setScanVisible ? RC.setScanVisible(!s.scanVisible) : !s.scanVisible; this.setState({ scanVisible: on }); },
+      onScanOp: (e) => { const v = parseFloat(e.target.value); if (RC.setScanOpacity) RC.setScanOpacity(v); this.setState({ scanOp: v }); },
+      elecLabel: T('Electrical'), elecBg: s.elecVisible ? '#ff6a13' : '#242b33',
+      toggleElec: () => { const on = RC.setElecVisible ? RC.setElecVisible(!s.elecVisible) : !s.elecVisible; this.setState({ elecVisible: on }); },
+      toggleRun: () => { if (RC.toggleRun) { const on = RC.toggleRun(); this.setState({ running: on }); } },
+      reset: () => { if (RC.reset) RC.reset(); },
+      onSpeed: (e) => { const v = parseFloat(e.target.value); if (RC.setSpeed) RC.setSpeed(v); this.setState({ speed: v }); },
+    });
+  }
+}
+</script>
+</body>
+</html>

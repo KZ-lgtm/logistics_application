@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Logistics.Wms.Api/Logistics.Wms.Api.csproj" />
+    <Project Path="src/Logistics.Wms.Application/Logistics.Wms.Application.csproj" />
+    <Project Path="src/Logistics.Wms.Domain/Logistics.Wms.Domain.csproj" />
+    <Project Path="src/Logistics.Wms.Infrastructure/Logistics.Wms.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Logistics.Wms.Tests/Logistics.Wms.Tests.csproj" />
+  </Folder>
+</Solution>
