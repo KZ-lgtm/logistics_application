@@ -1,0 +1,52 @@
+name: Deploy GitHub Pages
+
+# Publishes the static part of the project: a landing page (site/) and the standalone 3D cell simulation.
+# The WMS itself is an ASP.NET Core server and cannot run on GitHub Pages; see README.md.
+# Requires Settings → Pages → Build and deployment → Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [main, master, claude/cool-knuth-12edwq]
+    paths: [site/**, simulation/**, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/simulation
+          cp -r site/. _site/
+          cp simulation/robot_cell.html _site/simulation/
+          cp simulation/RiskAssessment_logistics_application_RevA.xlsx _site/simulation/
+          touch _site/.nojekyll
+          ls -la _site _site/simulation
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

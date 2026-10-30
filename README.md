@@ -81,6 +81,12 @@ The long-run tests check these invariants after 1,500 rounds:
 * lanes and active orders match one to one
 * R1 never has more than one task
 
+## GitHub Pages
+
+`.github/workflows/pages.yml` publishes a static site: the landing page in `site/`, the standalone 3D simulation
+(`simulation/robot_cell.html`) and the risk assessment. The WMS server is not part of it. To turn it on, set **Settings → Pages →
+Build and deployment → Source** to **GitHub Actions**.
+
 ## Configuration (`appsettings.json`)
 
 | Key | Default | |

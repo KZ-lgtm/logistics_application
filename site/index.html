@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logistics Application</title>
+<style>
+  :root { --bg: #14181d; --panel: #1b2026; --line: #2c343c; --text: #e8ecef; --muted: #9aa4ad; --accent: #ff6a13; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 32px; }
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  a.card { display: block; text-decoration: none; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  a.card:hover { border-color: var(--accent); }
+  .card h2 { font-size: 16px; margin: 0 0 6px; color: var(--accent); }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  code { background: #0f1215; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  pre { background: #0f1215; border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; }
+  section { margin-top: 36px; }
+  section h2 { font-size: 13px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Logistics application</h1>
+  <p class="sub">Goods-to-robot order fulfilment: cylinder ASRS (IRB 6700) → 3D-vision picking (2 × IRB 1300) → bar-code sortation onto an 8-lane put wall (2 × IRB 930).</p>
+
+  <div class="cards">
+    <a class="card" href="simulation/robot_cell.html">
+      <h2>Live 3D simulation →</h2>
+      <p>The robot cell running in your browser (about 10 MB, WebGL).</p>
+    </a>
+    <a class="card" href="simulation/RiskAssessment_logistics_application_RevA.xlsx">
+      <h2>Risk assessment ↓</h2>
+      <p>ISO 12100 risk assessment, revision A (Excel).</p>
+    </a>
+    <a class="card" id="repo" href="https://github.com/KZ-lgtm/logistics_application">
+      <h2>Warehouse management system →</h2>
+      <p>C# / .NET 10 WMS: orders, rolling waves, ASRS tasking, picking, sortation, restock, inventory.</p>
+    </a>
+  </div>
+
+  <section>
+    <h2>Run the WMS</h2>
+    <p>The WMS is an ASP.NET Core server with a live dashboard, so it runs locally rather than on GitHub Pages. With the .NET 10 SDK:</p>
+    <pre><code>dotnet run --project src/Logistics.Wms.Api --urls http://localhost:5213</code></pre>
+    <p>Then open <code>http://localhost:5213/</code> and press <b>Start simulation</b>.</p>
+  </section>
+</main>
+</body>
+</html>
