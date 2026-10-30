@@ -4,6 +4,8 @@
     <Project Path="src/Logistics.Wms.Application/Logistics.Wms.Application.csproj" />
     <Project Path="src/Logistics.Wms.Domain/Logistics.Wms.Domain.csproj" />
     <Project Path="src/Logistics.Wms.Infrastructure/Logistics.Wms.Infrastructure.csproj" />
+    <Project Path="src/Logistics.Wms.Persistence/Logistics.Wms.Persistence.csproj" />
+    <Project Path="src/Logistics.Wms.Web/Logistics.Wms.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Logistics.Wms.Tests/Logistics.Wms.Tests.csproj" />

@@ -1,0 +1,164 @@
+@page "/orders"
+@inherits WmsPage
+<PageTitle>Orders · Logistics WMS</PageTitle>
+<PageHeader Title="Orders" />
+
+<div class="content">
+    <section class="card">
+        <h2>New order</h2>
+        <div class="form-grid" style="grid-template-columns: minmax(160px, 1fr) 110px">
+            <div class="field"><span>Reference</span><input @bind="reference" placeholder="e.g. SHOP-10045" /></div>
+            <div class="field"><span>Priority</span><input type="number" @bind="priority" title="Higher priorities are released to the put wall first" /></div>
+        </div>
+        <div class="stack" style="margin-top: 10px">
+            @for (var i = 0; i < lines.Count; i++)
+            {
+                var line = lines[i];
+                <div class="line-row">
+                    <select @bind="line.Sku" aria-label="SKU">
+                        @foreach (var s in skus)
+                        {
+                            <option value="@s.Code">@s.Code · @s.Name (@s.Total in stock)</option>
+                        }
+                    </select>
+                    <input type="number" min="1" @bind="line.Quantity" aria-label="Quantity" />
+                    <button class="ghost" disabled="@(lines.Count == 1)" @onclick="() => lines.Remove(line)" aria-label="Remove line">✕</button>
+                </div>
+            }
+            <div class="row">
+                <button disabled="@(lines.Count >= OrderService.MaxLinesPerOrder)" @onclick="AddLine">+ Line</button>
+                <span class="spacer"></span>
+                <span class="muted small">Up to @OrderService.MaxLinesPerOrder SKUs per order case · same SKUs are merged</span>
+                <button class="primary" disabled="@busy" @onclick="Create">Create order</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <div class="tabs" style="margin: 0; border: 0">
+                @foreach (var f in Filters)
+                {
+                    <button class="@(filter == f ? "on" : "")" @onclick="() => SetFilter(f)">@(f?.ToString() ?? "All")</button>
+                }
+            </div>
+            <span class="muted small">newest @Take shown</span>
+        </div>
+        @if (orders.Count == 0)
+        {
+            <div class="empty">No orders.</div>
+        }
+        else
+        {
+            <div class="table-wrap tall">
+                <table>
+                    <thead><tr><th>#</th><th>Reference</th><th>Status</th><th>Prio</th><th>Lane</th><th class="r">Sorted</th><th>Created</th><th>Lines</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var o in orders)
+                        {
+                            <tr class="@(open == o.Id ? "sel" : "")" @onclick="() => open = open == o.Id ? null : o.Id" style="cursor: pointer">
+                                <td>@o.Id</td>
+                                <td>@o.Reference</td>
+                                <td><StatusPill Value="o.Status" /></td>
+                                <td>@o.Priority</td>
+                                <td>@o.LaneId</td>
+                                <td class="r">@o.SortedQuantity / @o.TotalQuantity</td>
+                                <td class="muted">@Fmt.Time(o.CreatedAt)</td>
+                                <td class="muted">@string.Join(", ", o.Lines.Select(l => $"{l.SkuCode}×{l.Quantity}"))</td>
+                                <td class="r">
+                                    @if (o.Status == OrderStatus.Queued || (o.Status == OrderStatus.Active && o.Lines.All(l => l.Picked == 0)))
+                                    {
+                                        <button class="sm danger" @onclick:stopPropagation @onclick="() => Cancel(o)">Cancel</button>
+                                    }
+                                </td>
+                            </tr>
+                            @if (open == o.Id)
+                            {
+                                <tr>
+                                    <td></td>
+                                    <td colspan="8">
+                                        <table>
+                                            <thead><tr><th>SKU</th><th class="r">Ordered</th><th class="r">Allocated</th><th class="r">Picked</th><th class="r">Sorted</th></tr></thead>
+                                            <tbody>
+                                                @foreach (var l in o.Lines)
+                                                {
+                                                    <tr><td>@l.SkuCode</td><td class="r">@l.Quantity</td><td class="r">@l.Allocated</td><td class="r">@l.Picked</td><td class="r">@l.Sorted</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                        <div class="small muted" style="padding: 6px 0">
+                                            Released @Fmt.Time(o.ActivatedAt) · finished @Fmt.Time(o.CompletedAt)
+                                            @if (o.ActivatedAt is DateTime a && o.CompletedAt is DateTime c) { <span> · lead time @((c - a).TotalSeconds.ToString("F0")) s</span> }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private const int Take = 200;
+    private static readonly OrderStatus?[] Filters = [null, OrderStatus.Queued, OrderStatus.Active, OrderStatus.Completed, OrderStatus.Cancelled];
+    private sealed class Line { public string Sku { get; set; } = ""; public int Quantity { get; set; } = 1; }
+
+    private IReadOnlyList<SkuStockDto> skus = [];
+    private IReadOnlyList<OrderDto> orders = [];
+    private readonly List<Line> lines = [];
+    private OrderStatus? filter;
+    private int? open;
+    private string reference = NewReference();
+    private int priority;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        skus = await Wms.QueryAsync(sp => sp.Get<InventoryService>().GetStockAsync());
+        AddLine();
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task LoadAsync() =>
+        orders = await Wms.QueryAsync(sp => sp.Get<OrderService>().ListAsync(filter, 0, Take));
+
+    private static string NewReference() => $"WEB-{DateTime.Now:yyMMdd-HHmmss}";
+
+    private void AddLine() => lines.Add(new Line { Sku = skus.Skip(lines.Count).FirstOrDefault()?.Code ?? skus.FirstOrDefault()?.Code ?? "" });
+
+    private async Task SetFilter(OrderStatus? f)
+    {
+        filter = f;
+        await LoadAsync();
+    }
+
+    private async Task Create()
+    {
+        busy = true;
+        var request = new CreateOrderRequest(reference, [.. lines.Select(l => new CreateOrderLineRequest(l.Sku, l.Quantity))], priority);
+        var order = await Wms.CommandAsync(sp => sp.Get<OrderService>().CreateAsync(request));
+        if (order is not null)
+        {
+            reference = NewReference();
+            lines.Clear();
+            AddLine();
+            open = order.Id;
+            var where = order.LaneId is null ? "queued until a lane is free" : $"released to lane {order.LaneId}";
+            Notify($"Order {order.Id} ({order.Reference}) created, {where}.");
+        }
+        busy = false;
+        await LoadAsync();
+    }
+
+    private async Task Cancel(OrderDto o)
+    {
+        await Wms.CommandAsync(sp => sp.Get<OrderService>().CancelAsync(o.Id), $"Order {o.Id} cancelled.");
+        await LoadAsync();
+    }
+
+    [Inject] private Notifications Notifications { get; set; } = null!;
+    private void Notify(string text) => Notifications.Info(text);
+}

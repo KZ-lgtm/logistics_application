@@ -3,7 +3,7 @@ using Logistics.Wms.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace Logistics.Wms.Infrastructure.Persistence;
+namespace Logistics.Wms.Persistence;
 
 public sealed class WmsDbContext(DbContextOptions<WmsDbContext> options) : DbContext(options), IWmsDbContext
 {

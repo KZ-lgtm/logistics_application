@@ -1,0 +1,7 @@
+<div class="kpi" title="@Hint"><b class="@Class">@Value</b><span>@Label</span></div>
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Hint { get; set; }
+}

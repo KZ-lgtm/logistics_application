@@ -1,13 +1,16 @@
 name: Deploy GitHub Pages
 
-# Publishes the static part of the project: a landing page (site/) and the standalone 3D cell simulation.
-# The WMS itself is an ASP.NET Core server and cannot run on GitHub Pages; see README.md.
+# Publishes the static site:
+#   /            landing page (site/)
+#   /wms/        the WMS, browser edition (Blazor WebAssembly, src/Logistics.Wms.Web)
+#   /simulation/ the standalone 3D cell simulation and the risk assessment
+# The ASP.NET Core server edition (src/Logistics.Wms.Api) cannot run on GitHub Pages; see README.md.
 # Requires Settings → Pages → Build and deployment → Source: "GitHub Actions".
 
 on:
   push:
     branches: [main, master, claude/cool-knuth-12edwq]
-    paths: [site/**, simulation/**, .github/workflows/pages.yml]
+    paths: [site/**, simulation/**, src/**, Directory.Build.props, global.json, .github/workflows/pages.yml]
   workflow_dispatch:
 
 permissions:
@@ -25,16 +28,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Publish the WMS (browser edition)
+        run: dotnet publish src/Logistics.Wms.Web -c Release -o publish/wms
+
       - name: Assemble site
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: |
+          base="${BASE_PATH%/}/"
           mkdir -p _site/simulation
           cp -r site/. _site/
-          cp simulation/robot_cell.html _site/simulation/
-          cp simulation/RiskAssessment_logistics_application_RevA.xlsx _site/simulation/
+          cp simulation/robot_cell.html simulation/RiskAssessment_logistics_application_RevA.xlsx _site/simulation/
+          cp -r publish/wms/wwwroot _site/wms
+          # the app lives under <base>wms/; GitHub Pages only serves the root 404.html, which forwards deep links into the app
+          sed -i "s|<base href=\"/\" />|<base href=\"${base}wms/\" />|" _site/wms/index.html
+          sed -e "s|data-base=\"/\"|data-base=\"${base}wms/\"|" -e "s|href=\"./\"|href=\"${base}\"|" _site/wms/404.html > _site/404.html
+          rm _site/wms/404.html
           touch _site/.nojekyll
-          ls -la _site _site/simulation
-
-      - uses: actions/configure-pages@v5
+          grep -q "<base href=\"${base}wms/\" />" _site/wms/index.html
+          du -sh _site _site/wms
 
       - uses: actions/upload-pages-artifact@v4
         with:

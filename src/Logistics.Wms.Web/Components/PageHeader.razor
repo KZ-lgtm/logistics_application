@@ -1,0 +1,9 @@
+<header class="topbar">
+    <h1 tabindex="-1">@Title</h1>
+    @ChildContent
+    <SimControls />
+</header>
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

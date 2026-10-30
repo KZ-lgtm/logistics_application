@@ -79,12 +79,13 @@ public sealed class SortationService(IWmsDbContext db, TimeProvider clock)
         return new SortConfirmationDto(pick.Id, lane.Id, order.Id, completed);
     }
 
-    /// <summary>Cartons on the belt and their routing (for the WCS after a restart).</summary>
-    public async Task<IReadOnlyList<ScanResultDto>> ListOnBeltAsync(CancellationToken ct = default) =>
-        await db.PickTasks.Where(p => p.Status == PickStatus.OnBelt || p.Status == PickStatus.Routed).OrderBy(p => p.PickedAt).ThenBy(p => p.Id)
-            .Select(p => new ScanResultDto(p.Id,
-                p.TargetSorter == null ? ScanTarget.Exception : p.TargetSorter == Sorter.S1 ? ScanTarget.S1 : ScanTarget.S2,
-                p.TargetLaneId, p.OrderId, null))
+    /// <summary>Cartons on the belt in belt order, with their routing once scanned (for the WCS after a restart, and the console).</summary>
+    public async Task<IReadOnlyList<BeltItemDto>> ListOnBeltAsync(CancellationToken ct = default) =>
+        await (from p in db.PickTasks
+               join s in db.Skus on p.SkuId equals s.Id
+               where p.Status == PickStatus.OnBelt || p.Status == PickStatus.Routed
+               orderby p.PickedAt, p.Id
+               select new BeltItemDto(p.Id, s.Code, p.OrderId, p.Status, p.TargetSorter, p.TargetLaneId, p.PickedAt))
             .ToListAsync(ct);
 
     private async Task ToExceptionAsync(PickTask pick, ExceptionReason reason, string? barcode, CancellationToken ct)

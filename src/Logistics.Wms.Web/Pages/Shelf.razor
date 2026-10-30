@@ -1,0 +1,148 @@
+@page "/shelf"
+@inherits WmsPage
+@using System.Globalization
+@using Logistics.Wms.Persistence
+<PageTitle>Cylinder shelf · Logistics WMS</PageTitle>
+<PageHeader Title="Cylinder shelf" />
+
+<div class="content">
+    <section class="card shelf">
+        <div class="stack">
+            <svg viewBox="-345 -320 690 640" role="img" aria-label="Top view of the cylinder shelf: 26 columns around R1, level 1 inside to level 8 outside">
+                @foreach (var s in slots)
+                {
+                    var b = s.BinId is null ? null : binById.GetValueOrDefault(s.BinId);
+                    <path class="slot @(selected == s.Id ? "sel" : "")" d="@Sector(s.Column, s.Level)" fill="@Fill(s, b)" @onclick="() => selected = s.Id">
+                        <title>@s.Code @(b is null ? (s.Blocked ? "· blocked" : "· free") : $"· {b.Id} · {b.SkuCode} {b.Quantity}/{b.Capacity}")</title>
+                    </path>
+                }
+                @PortLabels
+                <circle r="62" fill="#161b20" stroke="#2c343c" />
+                @{ var (hx, hy) = Polar(r1Angle, 82); }
+                <line x1="0" y1="0" x2="@F(hx)" y2="@F(hy)" stroke="#ff6a13" stroke-width="5" stroke-linecap="round" />
+                <circle r="20" fill="#ff6a13" />
+                <text y="42" text-anchor="middle" fill="#e8ecef" font-size="13">R1</text>
+            </svg>
+            <div class="legend" style="justify-content: center">
+                <span><i style="background: @FillRatio(1)"></i>full bin</span>
+                <span><i style="background: @FillRatio(.3)"></i>low bin</span>
+                <span><i style="background: #ffb020"></i>empty bin</span>
+                <span><i style="background: #232a31"></i>free slot</span>
+                <span><i style="background: #ff6a13"></i>reserved for R1</span>
+                <span><i style="background: #5a1d1d"></i>blocked</span>
+            </div>
+            <div class="small muted" style="text-align: center">Top view, north up. The east port feeds the picking loop, the west port the restock loop. Level 1 (0.30 m) is the inner ring, level 8 (2.89 m) the outer ring. R1 points at its last column.</div>
+        </div>
+
+        <div class="stack">
+            <h2>Slot</h2>
+            @if (Selected is { } sel)
+            {
+                var b = sel.BinId is null ? null : binById.GetValueOrDefault(sel.BinId);
+                <table>
+                    <tbody>
+                        <tr><td>Address</td><td class="r"><b>@sel.Code</b></td></tr>
+                        <tr><td>Column angle</td><td class="r">@((sel.Angle * 180 / Math.PI).ToString("F1"))°</td></tr>
+                        <tr><td>Bin floor height</td><td class="r">@sel.Height.ToString("F2") m</td></tr>
+                        <tr><td>R1 travel cost</td><td class="r">@Cost(sel).ToString("F2")</td></tr>
+                        <tr><td>Status</td><td class="r">@(sel.Blocked ? "blocked" : sel.Reserved ? "reserved for R1" : sel.BinId is null ? "free" : "occupied")</td></tr>
+                        @if (b is not null)
+                        {
+                            <tr><td>Bin</td><td class="r">@b.Id</td></tr>
+                            <tr><td>SKU</td><td class="r">@b.SkuCode</td></tr>
+                            <tr><td>Quantity</td><td class="r">@b.Quantity / @b.Capacity</td></tr>
+                            <tr><td>Stored</td><td class="r">@Fmt.Time(b.LastMovedAt)</td></tr>
+                        }
+                    </tbody>
+                </table>
+                @if (sel.BinId is null && !sel.Reserved)
+                {
+                    <button class="@(sel.Blocked ? "" : "danger")" @onclick="() => Block(sel, !sel.Blocked)">@(sel.Blocked ? "Release slot" : "Block for maintenance")</button>
+                }
+            }
+            else
+            {
+                <div class="muted">Click a slot.</div>
+            }
+
+            <h2 style="margin-top: 8px">Occupancy by level</h2>
+            <table>
+                <thead><tr><th>Level</th><th class="r">Height</th><th class="r">Bins</th><th class="r">Free</th></tr></thead>
+                <tbody>
+                    @for (var l = CellLayout.Levels - 1; l >= 0; l--)
+                    {
+                        var lv = l;
+                        <tr><td>@(lv + 1)</td><td class="r">@CellLayout.LevelHeight(lv).ToString("F2") m</td><td class="r">@slots.Count(s => s.Level == lv && s.BinId != null)</td><td class="r">@slots.Count(s => s.Level == lv && s.BinId == null && !s.Reserved && !s.Blocked)</td></tr>
+                    }
+                </tbody>
+            </table>
+            <p class="small muted">Dynamic slotting stores a returning bin in the free slot with the lowest travel cost: R1's swing from its current column plus 0.35 × the distance from the 1.4 m working height.</p>
+        </div>
+    </section>
+</div>
+
+@code {
+    private const double Inner = 78, Outer = 270;
+    private static readonly (string, int)[] Ports = [("east port", 0), ("west port", 13), ("north passage", 7)];
+
+    private IReadOnlyList<SlotDto> slots = [];
+    private Dictionary<string, BinDto> binById = [];
+    private double r1Angle;
+    private int? selected;
+
+    protected override TimeSpan Throttle => TimeSpan.FromSeconds(1);
+
+    private static readonly MarkupString PortLabels = new(string.Concat(Ports.Select(p =>
+    {
+        var (x, y) = Polar(CellLayout.ColumnAngle(p.Item2), 302);
+        return $"<text x=\"{F(x)}\" y=\"{F(y)}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"#9aa4ad\" font-size=\"13\">{p.Item1}</text>";
+    })));
+
+    private SlotDto? Selected => slots.FirstOrDefault(s => s.Id == selected);
+
+    protected override async Task LoadAsync()
+    {
+        (slots, var bins, r1Angle) = await Wms.QueryAsync(async sp => (
+            await sp.Get<InventoryService>().ListSlotsAsync(),
+            await sp.Get<InventoryService>().ListBinsAsync(null, BinLocation.Rack),
+            sp.Get<WmsDbContext>().CellState.Single().R1Angle));
+        binById = bins.ToDictionary(b => b.Id);
+    }
+
+    private async Task Block(SlotDto s, bool blocked)
+    {
+        await Wms.CommandAsync(sp => sp.Get<InventoryService>().SetSlotBlockedAsync(s.Id, blocked), blocked ? $"Slot {s.Code} blocked." : $"Slot {s.Code} released.");
+        await LoadAsync();
+    }
+
+    private double Cost(SlotDto s) =>
+        Math.Abs(CellLayout.WrapAngle(s.Angle - r1Angle)) + CellLayout.HeightWeight * Math.Abs(s.Height - CellLayout.PreferredHeight);
+
+    private static string F(double v) => v.ToString("F1", CultureInfo.InvariantCulture);
+
+    /// <summary>World angle (0 = east, counter-clockwise) → SVG point (north up).</summary>
+    private static (double X, double Y) Polar(double angle, double r) => (r * Math.Cos(angle), -r * Math.Sin(angle));
+
+    private static string Sector(int column, int level)
+    {
+        var half = Math.PI / CellLayout.Columns * 0.92;
+        var a0 = CellLayout.ColumnAngle(column) - half;
+        var a1 = CellLayout.ColumnAngle(column) + half;
+        var step = (Outer - Inner) / CellLayout.Levels;
+        var r0 = Inner + level * step + 1;
+        var r1 = Inner + (level + 1) * step - 1;
+        var (x0, y0) = Polar(a0, r0); var (x1, y1) = Polar(a0, r1); var (x2, y2) = Polar(a1, r1); var (x3, y3) = Polar(a1, r0);
+        return $"M{F(x0)} {F(y0)} L{F(x1)} {F(y1)} A{F(r1)} {F(r1)} 0 0 0 {F(x2)} {F(y2)} L{F(x3)} {F(y3)} A{F(r0)} {F(r0)} 0 0 1 {F(x0)} {F(y0)}Z";
+    }
+
+    private static string Fill(SlotDto s, BinDto? b) =>
+        s.Blocked ? "#5a1d1d" : s.Reserved ? "#ff6a13" : b is null ? "#232a31" : b.Quantity == 0 ? "#ffb020" : FillRatio((double)b.Quantity / b.Capacity);
+
+    /// <summary>Dark to bright green with the fill level.</summary>
+    private static string FillRatio(double f)
+    {
+        f = Math.Clamp(f, 0, 1);
+        int L(int a, int b) => (int)Math.Round(a + (b - a) * f);
+        return $"rgb({L(30, 53)},{L(77, 194)},{L(52, 107)})";
+    }
+}

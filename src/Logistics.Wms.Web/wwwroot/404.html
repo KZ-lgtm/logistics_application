@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Not found · Logistics</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #14181d; color: #e8ecef; font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+        a { color: #ff8a45; }
+    </style>
+    <!-- Published as the site's root 404.html. GitHub Pages has no fallback to index.html, so a deep link into the WMS such as
+         /wms/orders lands here: it is handed to the WMS index page as ?p=…, and js/interop.js restores it before the router starts.
+         data-base is set to the WMS base path at deploy time. -->
+    <script data-base="/">
+        (function () {
+            var base = document.currentScript.dataset.base, l = window.location;
+            if (base !== '/' && l.pathname.indexOf(base) === 0)
+                l.replace(l.protocol + '//' + l.host + base + '?p=' + encodeURIComponent(l.pathname.slice(base.length) + l.search) + l.hash);
+        })();
+    </script>
+</head>
+<body>
+    <p>Page not found. <a href="./">Back to the start page</a></p>
+</body>
+</html>

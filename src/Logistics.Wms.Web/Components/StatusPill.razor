@@ -1,0 +1,6 @@
+<span class="pill s-@Value">@Text</span>
+@code {
+    [Parameter, EditorRequired] public Enum Value { get; set; } = null!;
+    [Parameter] public string? Label { get; set; }
+    private string Text => Label ?? Value.Words();
+}

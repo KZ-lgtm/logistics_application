@@ -41,6 +41,9 @@ public sealed record ScanResultDto(long PickTaskId, ScanTarget Target, string? L
 
 public sealed record SortConfirmRequest(long PickTaskId, string LaneId);
 
+/// <summary>A carton on the item belt: not yet scanned (<see cref="PickStatus.OnBelt"/>) or routed to its sorter and lane.</summary>
+public sealed record BeltItemDto(long PickTaskId, string SkuCode, int OrderId, PickStatus Status, Sorter? TargetSorter, string? TargetLaneId, DateTime? PickedAt);
+
 public sealed record SortConfirmationDto(long PickTaskId, string LaneId, int OrderId, bool OrderCompleted);
 
 // ---------------------------------------------------------------- put wall

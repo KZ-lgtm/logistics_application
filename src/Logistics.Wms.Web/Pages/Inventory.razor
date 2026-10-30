@@ -1,0 +1,183 @@
+@page "/inventory"
+@inherits WmsPage
+<PageTitle>Inventory · Logistics WMS</PageTitle>
+<PageHeader Title="Inventory" />
+
+<div class="content">
+    <section class="card">
+        <div class="tabs">
+            <button class="@(tab == Tab.Stock ? "on" : "")" @onclick="() => Show(Tab.Stock)">Stock per SKU</button>
+            <button class="@(tab == Tab.Bins ? "on" : "")" @onclick="() => Show(Tab.Bins)">Bins</button>
+            <button class="@(tab == Tab.Ledger ? "on" : "")" @onclick="() => Show(Tab.Ledger)">Stock ledger</button>
+        </div>
+
+        @switch (tab)
+        {
+            case Tab.Stock:
+                <div class="row" style="margin-bottom: 10px">
+                    <input placeholder="Filter SKU or name" @bind="skuFilter" @bind:event="oninput" />
+                    <label><input type="checkbox" @bind="lowOnly" /> at or below reorder point</label>
+                    <span class="spacer"></span>
+                    <span class="muted small">@stock.Sum(s => s.Total) cartons in @stock.Sum(s => s.Bins) bins</span>
+                </div>
+                <div class="table-wrap tall">
+                    <table>
+                        <thead><tr><th>SKU</th><th>Name</th><th>Size</th><th class="r">Bin cap.</th><th class="r">Bins</th><th class="r">In shelf</th><th class="r">On loops</th><th class="r">Exc. buffer</th><th class="r">Total</th><th class="r">Pending picks</th><th class="r">Open demand</th><th class="r">Reorder pt.</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var s in FilteredStock)
+                            {
+                                <tr>
+                                    <td>@s.Code</td><td>@s.Name</td><td>@s.Size</td><td class="r">@s.BinCapacity</td><td class="r">@s.Bins</td>
+                                    <td class="r">@s.InRack</td><td class="r">@s.OnLoops</td><td class="r">@s.RestockBuffer</td>
+                                    <td class="r @(s.LowStock ? "warn" : "")">@s.Total</td><td class="r">@s.PendingPicks</td><td class="r">@s.OpenDemand</td><td class="r">@s.ReorderPoint</td>
+                                    <td><button class="sm ghost" @onclick="() => ShowBins(s.Code)">bins →</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <h2 style="margin-top: 16px">New SKU</h2>
+                <div class="form-grid">
+                    <div class="field"><span>Code (bar code)</span><input @bind="newSku.Code" placeholder="SKU-1041" /></div>
+                    <div class="field"><span>Name</span><input @bind="newSku.Name" /></div>
+                    <div class="field"><span>Carton size</span>
+                        <select @bind="newSku.Size">
+                            @foreach (var z in Enum.GetValues<SkuSize>()) { <option value="@z">@z · @CellLayout.BinCapacity(z) per bin</option> }
+                        </select>
+                    </div>
+                    <div class="field"><span>Weight (kg, ≤ 2)</span><input type="number" step="0.05" @bind="newSku.WeightKg" /></div>
+                    <div class="field"><span>Reorder point</span><input type="number" min="0" @bind="newSku.ReorderPoint" /></div>
+                    <div><button class="primary" @onclick="CreateSku">Create SKU</button></div>
+                </div>
+                <p class="small muted">A new SKU gets stock when the restock operator gives it an empty bin (Cell operations → restock).</p>
+                break;
+
+            case Tab.Bins:
+                <div class="row" style="margin-bottom: 10px">
+                    <input placeholder="SKU code" @bind="binSku" @bind:after="LoadAsync" />
+                    <select @bind="binLocation" @bind:after="LoadAsync">
+                        <option value="">all locations</option>
+                        @foreach (var l in Enum.GetValues<BinLocation>()) { <option value="@l">@Fmt.Location(l)</option> }
+                    </select>
+                    <span class="spacer"></span>
+                    <span class="muted small">@bins.Count bins</span>
+                </div>
+                <div class="table-wrap tall">
+                    <table>
+                        <thead><tr><th>Bin</th><th>SKU</th><th class="r">Qty</th><th class="r">Cap.</th><th>Location</th><th>Slot</th><th>Last moved</th><th>Cycle count</th></tr></thead>
+                        <tbody>
+                            @foreach (var b in bins)
+                            {
+                                var countable = (b.Location == BinLocation.Rack && !b.Reserved) || b.Location == BinLocation.RestockStation;
+                                <tr>
+                                    <td>@b.Id</td><td>@b.SkuCode</td>
+                                    <td class="r">@b.Quantity</td><td class="r">@b.Capacity</td>
+                                    <td><StatusPill Value="b.Location" Label="@(Fmt.Location(b.Location) + (b.Station is null ? "" : " " + b.Station) + (b.Reserved ? " · R1 task" : ""))" /></td>
+                                    <td>@b.Slot</td>
+                                    <td class="muted">@Fmt.Time(b.LastMovedAt)</td>
+                                    <td>
+                                        @if (countable)
+                                        {
+                                            <span class="row" style="gap: 4px">
+                                                <input type="number" min="0" max="@b.Capacity" value="@b.Quantity" @onchange="e => counted[b.Id] = int.TryParse(e.Value?.ToString(), out var v) ? v : b.Quantity" />
+                                                <button class="sm" @onclick="() => Adjust(b)">Book</button>
+                                            </span>
+                                        }
+                                        else { <span class="muted small">moving</span> }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                break;
+
+            case Tab.Ledger:
+                <div class="row" style="margin-bottom: 10px">
+                    <input placeholder="SKU code" @bind="ledgerSku" @bind:after="LoadAsync" />
+                    <input placeholder="Bin" @bind="ledgerBin" @bind:after="LoadAsync" />
+                    <span class="spacer"></span>
+                    <span class="muted small">newest 300 bookings · sum of all bookings = stock</span>
+                </div>
+                <div class="table-wrap tall">
+                    <table>
+                        <thead><tr><th>#</th><th>Time</th><th>Type</th><th>SKU</th><th>Bin</th><th class="r">Qty</th><th class="r">Bin after</th><th>Reference</th><th>User</th></tr></thead>
+                        <tbody>
+                            @foreach (var t in ledger)
+                            {
+                                <tr>
+                                    <td class="muted">@t.Id</td><td>@Fmt.Time(t.At)</td><td>@t.Type.Words()</td><td>@t.SkuCode</td><td>@t.BinId</td>
+                                    <td class="r @(t.Quantity < 0 ? "bad" : t.Quantity > 0 ? "ok" : "")">@t.Quantity.ToString("+0;-0;0")</td>
+                                    <td class="r">@t.BinQuantityAfter</td><td class="muted wrap">@t.Reference</td><td class="muted">@t.User</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                break;
+        }
+    </section>
+</div>
+
+@code {
+    private enum Tab { Stock, Bins, Ledger }
+    private sealed class NewSku { public string Code { get; set; } = ""; public string Name { get; set; } = ""; public SkuSize Size { get; set; } = SkuSize.M; public double WeightKg { get; set; } = 0.5; public int ReorderPoint { get; set; } = 6; }
+
+    private Tab tab;
+    private IReadOnlyList<SkuStockDto> stock = [];
+    private IReadOnlyList<BinDto> bins = [];
+    private IReadOnlyList<InventoryTransactionDto> ledger = [];
+    private string skuFilter = "";
+    private bool lowOnly;
+    private string? binSku;
+    private BinLocation? binLocation;
+    private string? ledgerSku, ledgerBin;
+    private NewSku newSku = new();
+    private readonly Dictionary<string, int> counted = [];
+
+    protected override TimeSpan Throttle => TimeSpan.FromSeconds(1.5);
+
+    private IEnumerable<SkuStockDto> FilteredStock => stock
+        .Where(s => !lowOnly || s.LowStock)
+        .Where(s => skuFilter.Length == 0 || s.Code.Contains(skuFilter, StringComparison.OrdinalIgnoreCase) || s.Name.Contains(skuFilter, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task LoadAsync()
+    {
+        switch (tab)
+        {
+            case Tab.Stock: stock = await Wms.QueryAsync(sp => sp.Get<InventoryService>().GetStockAsync()); break;
+            case Tab.Bins: bins = await Wms.QueryAsync(sp => sp.Get<InventoryService>().ListBinsAsync(binSku, binLocation)); break;
+            case Tab.Ledger: ledger = await Wms.QueryAsync(sp => sp.Get<InventoryService>().ListTransactionsAsync(ledgerSku, ledgerBin, 300)); break;
+        }
+    }
+
+    private async Task Show(Tab t)
+    {
+        tab = t;
+        await LoadAsync();
+    }
+
+    private async Task ShowBins(string sku)
+    {
+        binSku = sku;
+        binLocation = null;
+        await Show(Tab.Bins);
+    }
+
+    private async Task Adjust(BinDto b)
+    {
+        var qty = counted.GetValueOrDefault(b.Id, b.Quantity);
+        await Wms.CommandAsync(sp => sp.Get<InventoryService>().AdjustBinAsync(b.Id, new AdjustBinRequest(qty, "cycle count", "console")),
+            qty == b.Quantity ? $"Bin {b.Id}: count confirmed ({qty})." : $"Bin {b.Id}: {b.Quantity} → {qty} booked.");
+        counted.Remove(b.Id);
+        await LoadAsync();
+    }
+
+    private async Task CreateSku()
+    {
+        var r = new CreateSkuRequest(newSku.Code, newSku.Name, newSku.Size, newSku.WeightKg, newSku.ReorderPoint);
+        if (await Wms.CommandAsync(sp => sp.Get<InventoryService>().CreateSkuAsync(r), $"SKU {newSku.Code.Trim().ToUpperInvariant()} created.") is not null)
+            newSku = new();
+        await LoadAsync();
+    }
+}

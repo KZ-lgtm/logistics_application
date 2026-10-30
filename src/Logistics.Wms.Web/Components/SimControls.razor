@@ -1,0 +1,39 @@
+@implements IDisposable
+@inject SimulationRunner Sim
+@inject WmsClient Wms
+<div class="row">
+    <span class="row small muted" title="The built-in cell simulator plays R1, R2 / R3, the arch, S1 / S2 and both operators through the WMS">
+        <span class="dot @(Sim.Running ? "ok" : "muted")"></span>
+        Simulator @(Sim.Running ? "running" : "stopped") · round @Sim.State.Rounds
+        @if (Sim.Running && Sim.LastRoundMs > 0) { <span>· @Sim.LastRoundMs.ToString("F0") ms</span> }
+    </span>
+    @if (Sim.Running)
+    {
+        <button @onclick="Sim.Stop">■ Stop</button>
+    }
+    else
+    {
+        <button class="primary" @onclick="Sim.Start">▶ Run cell</button>
+        <button disabled="@stepping" @onclick="Step">Step ×10</button>
+    }
+</div>
+@code {
+    private bool stepping;
+    protected override void OnInitialized()
+    {
+        Sim.Changed += Refresh;
+        Wms.Changed += Refresh;
+    }
+    private void Refresh() => InvokeAsync(StateHasChanged);
+    private async Task Step()
+    {
+        stepping = true;
+        await Sim.StepAsync(10);
+        stepping = false;
+    }
+    public void Dispose()
+    {
+        Sim.Changed -= Refresh;
+        Wms.Changed -= Refresh;
+    }
+}

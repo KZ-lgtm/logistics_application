@@ -1,0 +1,43 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject BrowserStore Store
+@inject WmsClient Wms
+<div class="shell">
+    <aside class="side">
+        <div class="brand"><i></i><div>Logistics WMS<span>browser edition</span></div></div>
+        <nav class="nav" aria-label="Main">
+            <NavLink title="Dashboard" aria-label="Dashboard" href="" Match="NavLinkMatch.All"><Icon Name="dash" /><span>Dashboard</span></NavLink>
+            <NavLink title="Orders" aria-label="Orders" href="orders"><Icon Name="orders" /><span>Orders</span></NavLink>
+            <NavLink title="Cell operations" aria-label="Cell operations" href="operations"><Icon Name="ops" /><span>Cell operations</span></NavLink>
+            <NavLink title="Inventory" aria-label="Inventory" href="inventory"><Icon Name="stock" /><span>Inventory</span></NavLink>
+            <NavLink title="Cylinder shelf" aria-label="Cylinder shelf" href="shelf"><Icon Name="shelf" /><span>Cylinder shelf</span></NavLink>
+            <NavLink title="Data &amp; storage" aria-label="Data &amp; storage" href="data"><Icon Name="data" /><span>Data &amp; storage</span></NavLink>
+        </nav>
+        <div class="side-foot">
+            <span>@(Store.LastSaved is null ? (Store.Restored ? "Restored from this browser" : "New cell, not saved yet") : $"Saved {Fmt.Time(Store.LastSaved)} · {Fmt.Bytes(Store.LastSize)}")</span>
+            <span>Runs in your browser · <a href="../">project home</a></span>
+        </div>
+    </aside>
+    <div class="main">
+        @if (Store.Warning is not null)
+        {
+            <div class="content" style="padding-bottom: 0"><div class="banner">@Store.Warning</div></div>
+        }
+        @Body
+    </div>
+</div>
+<Toasts />
+@code {
+    private Timer? timer;
+    protected override void OnInitialized()
+    {
+        Wms.Changed += Refresh;
+        timer = new Timer(_ => Refresh(), null, 3500, 3500);
+    }
+    private void Refresh() => InvokeAsync(StateHasChanged);
+    public void Dispose()
+    {
+        Wms.Changed -= Refresh;
+        timer?.Dispose();
+    }
+}

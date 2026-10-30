@@ -9,23 +9,54 @@ simulation and ISO 12100 risk assessment of the cell:
 * **S1 / S2** IRB 930 SCARAs putting cartons into order cases on an **8-lane put wall**
 * a **restock operator** outside the west port and a **packing operator** at the put wall
 
-The WMS owns the stock, the orders and every decision the cell needs. The cell controller (WCS / PLC / operator panels) reports
-events and asks for the next task over HTTP.
+The WMS owns the stock, the orders and every decision the cell needs. It comes in two editions that share the same domain model
+and WMS services:
+
+| | **Server edition** (`Logistics.Wms.Api`) | **Browser edition** (`Logistics.Wms.Web`) |
+|---|---|---|
+| Runs as | ASP.NET Core service | Blazor WebAssembly app, static files (GitHub Pages) |
+| Database | SQLite | EF Core in-memory, saved to the browser's local storage |
+| Used by | the real cell: the cell controller (WCS / PLC / operator panels) reports events and asks for the next task over HTTP | people: demonstration, training, process studies, with the built-in simulator or a hand-operated cell console |
 
 ```
 src/
   Logistics.Wms.Domain          entities, enums, cell layout constants (no dependencies)
   Logistics.Wms.Application     WMS services, contracts, slotting policy, cell simulator
-  Logistics.Wms.Infrastructure  EF Core 10 + SQLite persistence, schema creation and seeding
-  Logistics.Wms.Api             ASP.NET Core minimal API, OpenAPI document, live dashboard (wwwroot)
+  Logistics.Wms.Persistence     EF Core model (WmsDbContext), seeding, JSON snapshots (provider-neutral)
+  Logistics.Wms.Infrastructure  SQLite provider for the server edition
+  Logistics.Wms.Api             server edition: ASP.NET Core minimal API, OpenAPI document, live dashboard (wwwroot)
+  Logistics.Wms.Web             browser edition: Blazor WebAssembly app for GitHub Pages
 tests/
-  Logistics.Wms.Tests           xUnit: unit, process-flow, long simulation runs, HTTP integration
+  Logistics.Wms.Tests           xUnit: unit, process-flow, long simulation runs (SQLite and in-memory), snapshots,
+                                history compaction, HTTP integration
+site/                           GitHub Pages landing page
 simulation/                     the original 3D cell simulation and risk assessment (unchanged)
 ```
 
 ## Quick start
 
 Requires the .NET 10 SDK.
+
+### Browser edition
+
+Published at `https://<owner>.github.io/<repo>/wms/` by the Pages workflow (see [GitHub Pages](#github-pages)). Locally:
+
+```bash
+dotnet run --project src/Logistics.Wms.Web
+```
+
+Open the URL it prints and press **Run cell**, or create orders and work through **Cell operations** by hand. Its pages:
+
+* **Dashboard**: KPIs, put wall, R1 task, stops, storage, exceptions, low stock, and the simulator settings.
+* **Orders**: create (several lines, priority), filter by status, line details, cancel.
+* **Cell operations**: every cell event as a button, in process order: R1 task done or cancelled, decision point, arrival at a stop, pick confirmation, 3D count correction, scan (OK / no-read / wrong code), sort, missed carton, lane steps, restock (fill level, new SKU), exception disposition.
+* **Inventory**: stock per SKU, new SKUs, bins with cycle counts, the stock ledger.
+* **Cylinder shelf**: top view of all 144 slots coloured by fill, R1's heading, slot details, block/unblock.
+* **Data & storage**: save status, JSON export/import, history compaction, reset.
+
+State lives in the browser's local storage, separately for each browser. History is compacted automatically once there are more than 600 orders.
+
+### Server edition
 
 ```bash
 dotnet run --project src/Logistics.Wms.Api --urls http://localhost:5213
@@ -83,9 +114,19 @@ The long-run tests check these invariants after 1,500 rounds:
 
 ## GitHub Pages
 
-`.github/workflows/pages.yml` publishes a static site: the landing page in `site/`, the standalone 3D simulation
-(`simulation/robot_cell.html`) and the risk assessment. The WMS server is not part of it. To turn it on, set **Settings → Pages →
-Build and deployment → Source** to **GitHub Actions**.
+`.github/workflows/pages.yml` builds and publishes the static site:
+
+| Path | Content |
+|---|---|
+| `/` | landing page (`site/`) |
+| `/wms/` | the browser edition (`dotnet publish src/Logistics.Wms.Web`) |
+| `/simulation/` | the standalone 3D cell simulation and the risk assessment |
+
+The workflow sets the app's `<base href>` from the Pages base path, so it works under any repository name or a custom domain. GitHub Pages
+has no fallback to `index.html`, so the root `404.html` forwards deep links such as `/wms/orders` into the app.
+
+To turn it on, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. Then push, or run the workflow from the
+Actions tab.
 
 ## Configuration (`appsettings.json`)
 
@@ -102,3 +143,4 @@ Build and deployment → Source** to **GitHub Actions**.
 * **Schema creation.** The schema is created with `EnsureCreated`. Add EF Core migrations before you need to evolve a production database.
 * **No authentication** yet. Put the API behind the plant network or add authentication before exposing it.
 * Cell geometry (slot angles and heights, gap columns, capacities) lives in `CellLayout` and matches `simulation/canvas/project/app.js`.
+* **Browser edition.** It has no server and no shared state: each browser has its own cell, and local storage can be cleared by the user or the browser. Use JSON export for anything worth keeping. The in-memory provider has no indexes, which is why history is compacted early. `HistoryService` keeps lifetime KPIs and folds old ledger entries into opening balances, so stock stays exact. The first visit downloads the .NET runtime (about 10 MB); later visits load from the browser cache.

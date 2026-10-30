@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logistics WMS</title>
+    <meta name="description" content="Warehouse management system for the logistics robot cell, running entirely in the browser (Blazor WebAssembly)." />
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff6a13'/%3E%3Cpath d='M8 22V12l8-4 8 4v10l-8 4z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script type="importmap"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="boot">
+            <div class="boot-mark"></div>
+            <div>Loading the WMS<span class="boot-pct"></span></div>
+            <div class="muted">The .NET runtime and the WMS run in your browser; the first load downloads about 10 MB.</div>
+        </div>
+    </div>
+    <div id="blazor-error-ui">
+        Something went wrong. <a href="." class="reload">Reload</a> <span class="dismiss">✕</span>
+    </div>
+    <script src="js/interop.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+</body>
+</html>

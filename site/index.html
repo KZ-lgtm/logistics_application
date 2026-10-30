@@ -28,6 +28,10 @@
   <p class="sub">Goods-to-robot order fulfilment: cylinder ASRS (IRB 6700) → 3D-vision picking (2 × IRB 1300) → bar-code sortation onto an 8-lane put wall (2 × IRB 930).</p>
 
   <div class="cards">
+    <a class="card" href="wms/">
+      <h2>Open the WMS →</h2>
+      <p>The warehouse management system, running entirely in your browser: orders, rolling waves, R1 tasking, picking, sortation, restock, inventory. State is kept in this browser.</p>
+    </a>
     <a class="card" href="simulation/robot_cell.html">
       <h2>Live 3D simulation →</h2>
       <p>The robot cell running in your browser (about 10 MB, WebGL).</p>
@@ -37,14 +41,15 @@
       <p>ISO 12100 risk assessment, revision A (Excel).</p>
     </a>
     <a class="card" id="repo" href="https://github.com/KZ-lgtm/logistics_application">
-      <h2>Warehouse management system →</h2>
-      <p>C# / .NET 10 WMS: orders, rolling waves, ASRS tasking, picking, sortation, restock, inventory.</p>
+      <h2>Source code →</h2>
+      <p>C# / .NET 10: the domain model and WMS services, the ASP.NET Core server edition and the Blazor browser edition.</p>
     </a>
   </div>
 
   <section>
-    <h2>Run the WMS</h2>
-    <p>The WMS is an ASP.NET Core server with a live dashboard, so it runs locally rather than on GitHub Pages. With the .NET 10 SDK:</p>
+    <h2>Two editions, one WMS</h2>
+    <p>The <a href="wms/">browser edition</a> runs the WMS services compiled to WebAssembly, with its database in the browser, for demonstration and training.
+      The server edition is the same WMS as an ASP.NET Core service with an HTTP API for the real cell, backed by SQLite. To run it with the .NET 10 SDK:</p>
     <pre><code>dotnet run --project src/Logistics.Wms.Api --urls http://localhost:5213</code></pre>
     <p>Then open <code>http://localhost:5213/</code> and press <b>Start simulation</b>.</p>
   </section>

@@ -89,4 +89,6 @@ public enum InventoryTransactionType
     Adjustment,
     /// <summary>Carton from the exception tote returned to stock (into the SKU's restock buffer, +1).</summary>
     ReturnFromException,
+    /// <summary>Sum of older bookings of a bin (or a SKU's restock buffer) that were folded together by history compaction.</summary>
+    OpeningBalance,
 }

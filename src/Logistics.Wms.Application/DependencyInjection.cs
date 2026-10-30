@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<ExceptionService>();
         services.AddScoped<InventoryService>();
         services.AddScoped<DashboardService>();
+        services.AddScoped<HistoryService>();
         services.AddScoped<CellSimulator>();
         return services;
     }

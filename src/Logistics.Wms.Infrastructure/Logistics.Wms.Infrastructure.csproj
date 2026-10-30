@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Logistics.Wms.Application\Logistics.Wms.Application.csproj" />
+    <ProjectReference Include="..\Logistics.Wms.Persistence\Logistics.Wms.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,7 +4,7 @@ using Logistics.Wms.Application.Services;
 using Logistics.Wms.Application.Simulation;
 using Logistics.Wms.Domain;
 using Logistics.Wms.Infrastructure;
-using Logistics.Wms.Infrastructure.Persistence;
+using Logistics.Wms.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,18 +45,45 @@ public sealed class WmsHarness : IAsyncDisposable
     public ExceptionService Exceptions => Get<ExceptionService>();
     public InventoryService Inventory => Get<InventoryService>();
 
-    public static async Task<WmsHarness> CreateAsync(SimulationOptions? simulation = null)
+    /// <param name="inMemory">EF Core in-memory provider (as used by the browser edition) instead of SQLite.</param>
+    public static async Task<WmsHarness> CreateAsync(SimulationOptions? simulation = null, bool inMemory = false, bool seed = true)
     {
-        var cs = $"Data Source=wms-{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
+        var name = $"wms-{Guid.NewGuid():N}";
+        var cs = $"Data Source={name};Mode=Memory;Cache=Shared";
         var keepAlive = new SqliteConnection(cs);
         await keepAlive.OpenAsync();
-        var services = new ServiceCollection()
-            .AddWmsApplication(simulation)
-            .AddWmsInfrastructure(cs)
-            .AddSingleton<TimeProvider>(new ManualClock(new DateTimeOffset(2026, 10, 30, 8, 0, 0, TimeSpan.Zero)));
+        var services = new ServiceCollection().AddWmsApplication(simulation);
+        if (inMemory)
+        {
+            services.AddDbContext<WmsDbContext>(o => o.UseInMemoryDatabase(name));
+            services.AddScoped<Logistics.Wms.Application.Abstractions.IWmsDbContext>(sp => sp.GetRequiredService<WmsDbContext>());
+        }
+        else
+        {
+            services.AddWmsInfrastructure(cs);
+        }
+        services.AddSingleton<TimeProvider>(new ManualClock(new DateTimeOffset(2026, 10, 30, 8, 0, 0, TimeSpan.Zero)));
         var root = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
-        await root.InitializeWmsDatabaseAsync();
+        if (!seed)
+        {
+            await using var scope = root.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<WmsDbContext>().Database.EnsureCreatedAsync();
+        }
+        else if (inMemory) await WmsDatabase.InitializeAsync(root);
+        else await root.InitializeWmsDatabaseAsync();
         return new WmsHarness(keepAlive, root);
+    }
+
+    /// <summary>Runs simulator rounds, two simulated seconds apart.</summary>
+    public async Task RunSimulationAsync(int rounds)
+    {
+        for (var i = 0; i < rounds; i++)
+        {
+            await Get<CellSimulator>().StepAsync();
+            Clock.Advance(TimeSpan.FromSeconds(2));
+            if (i % 100 == 99) await NewScopeAsync();
+        }
+        await NewScopeAsync();
     }
 
     /// <summary>Drops tracked entities so the next reads come from the database.</summary>
