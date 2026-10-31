@@ -1,0 +1,181 @@
+@page "/robots"
+@inherits WmsPage
+<PageTitle>Robots · Logistics WMS</PageTitle>
+<PageHeader Title="Robots" />
+
+<div class="content">
+    <p class="muted" style="margin: 0">
+        The WMS dispatches work to all five robots and tracks each one's task, cycle times, utilisation and faults. When a robot is down the
+        WMS works around it. R1 gets no new task. A picker's stop is skipped, and the bin standing there goes back with its open picks, so the
+        other stop takes over. A sorter's lanes take no new orders, and its orders wait until it is back.
+    </p>
+
+    <div class="robots">
+        @foreach (var r in robots)
+        {
+            var f = Form(r.Id);
+            <section class="card robot @(r.State == RobotState.Fault ? "fault" : "")">
+                <div class="card-head">
+                    <div>
+                        <h3 style="margin: 0">@r.Id <span class="muted" style="font-weight: 400">· @r.Model</span></h3>
+                        <div class="small muted">@r.Assignment · @r.Tool · @r.Controller</div>
+                    </div>
+                    <span class="pill s-@(r.State == RobotState.Fault ? "Exception" : r.State == RobotState.Working ? "Active" : "Ready")">@r.State</span>
+                </div>
+
+                <div class="segmented" role="group" aria-label="@r.Id mode">
+                    @foreach (var m in Enum.GetValues<RobotMode>())
+                    {
+                        <button class="@(r.Mode == m ? "on" : "")" @onclick="() => SetMode(r, m)">@m</button>
+                    }
+                </div>
+
+                <div class="task-line">
+                    @if (r.TaskText is not null)
+                    {
+                        <span>▶ @r.TaskText</span><span class="muted small"> · @Fmt.Ago(r.TaskStartedAt, now)</span>
+                    }
+                    else
+                    {
+                        <span class="muted">@(r.Available ? "idle, waiting for work" : r.State == RobotState.Fault ? "stopped by a fault" : $"no work in {r.Mode} mode")</span>
+                    }
+                </div>
+
+                <div class="robot-kpis">
+                    <div><b>@r.Cycles</b><span>cycles</span></div>
+                    <div><b>@(r.AverageCycleSeconds is double a ? a.ToString("F1") + " s" : "—")</b><span>avg. cycle</span></div>
+                    <div><b>@(r.Cycles > 0 ? r.LastCycleSeconds.ToString("F1") + " s" : "—")</b><span>last cycle</span></div>
+                    <div><b>@r.Faults</b><span>faults</span></div>
+                </div>
+                <div class="small muted row" style="justify-content: space-between"><span>Utilisation</span><span>@((r.Utilization * 100).ToString("F0")) %</span></div>
+                <div class="bar accent"><i style="width:@((r.Utilization * 100).ToString("F0"))%"></i></div>
+                <div class="small muted row" style="justify-content: space-between"><span>Availability</span><span>@((r.Availability * 100).ToString("F1")) %</span></div>
+                <div class="bar"><i style="width:@((r.Availability * 100).ToString("F0"))%"></i></div>
+
+                @if (r.State == RobotState.Fault)
+                {
+                    <div class="banner"><b>@r.FaultCode</b> @r.FaultText <span class="small">· since @Fmt.Time(r.FaultSince)</span></div>
+                    <div><button class="primary" @onclick="() => Clear(r)">Clear fault</button></div>
+                }
+                else
+                {
+                    <div class="row">
+                        <input style="width: 92px" @bind="f.Code" aria-label="Fault code" />
+                        <input style="flex: 1 1 120px" @bind="f.Text" placeholder="fault text" aria-label="Fault text" />
+                        <button class="danger" @onclick="() => Fault(r, f)">Report fault</button>
+                    </div>
+                }
+
+                <details>
+                    <summary class="small muted">Dispatch by hand</summary>
+                    <div class="stack" style="margin-top: 8px">
+                        <div class="small muted">What the robot's controller does: ask the WMS for the next task, report it done.</div>
+                        @if (f.Task is { } t)
+                        {
+                            <div class="task small"><b>@t.Kind</b> · @t.Description @if (t.From is not null) { <span class="muted">· @t.From → @t.To</span> }</div>
+                            <div class="row"><button class="primary sm" @onclick="() => Complete(r, f)">Task done</button><button class="sm ghost" @onclick="() => f.Task = null">Forget</button></div>
+                        }
+                        else
+                        {
+                            <div><button class="sm" @onclick="() => Next(r, f)">Next task</button></div>
+                        }
+                    </div>
+                </details>
+            </section>
+        }
+    </div>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>Robot events</h2>
+            <button class="sm" @onclick="ResetStats">Reset figures</button>
+        </div>
+        @if (events.Count == 0)
+        {
+            <div class="empty">No events yet: faults, mode changes and reassigned work are logged here.</div>
+        }
+        else
+        {
+            <div class="table-wrap" style="max-height: 320px">
+                <table>
+                    <thead><tr><th>Time</th><th>Robot</th><th>Event</th><th>Code</th><th>Text</th><th>User</th></tr></thead>
+                    <tbody>
+                        @foreach (var e in events)
+                        {
+                            <tr>
+                                <td>@Fmt.Time(e.At)</td><td>@e.RobotId</td>
+                                <td><span class="pill s-@(e.Kind == RobotEventKind.Fault ? "Exception" : e.Kind == RobotEventKind.FaultCleared ? "Active" : "Ready")">@e.Kind.Words()</span></td>
+                                <td>@e.Code</td><td class="wrap">@e.Text</td><td class="muted">@e.User</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private sealed class RobotForm { public string Code { get; set; } = ""; public string Text { get; set; } = ""; public RobotTaskDto? Task { get; set; } }
+
+    private IReadOnlyList<RobotDto> robots = [];
+    private IReadOnlyList<RobotEventDto> events = [];
+    private readonly Dictionary<string, RobotForm> forms = [];
+    private DateTime now = DateTime.UtcNow;
+
+    [Inject] private TimeProvider Clock { get; set; } = null!;
+
+    protected override async Task LoadAsync()
+    {
+        (robots, events) = await Wms.QueryAsync(async sp => (await sp.Get<RobotService>().ListAsync(), await sp.Get<RobotService>().ListEventsAsync(null, 100)));
+        now = Clock.GetUtcNow().UtcDateTime;
+    }
+
+    private RobotForm Form(string id)
+    {
+        if (!forms.TryGetValue(id, out var f))
+            forms[id] = f = new RobotForm { Code = id switch { "R1" => "50056", "R2" or "R3" => "VAC-01", _ => "E-417" }, Text = id switch { "R1" => "joint collision", "R2" or "R3" => "vacuum lost", _ => "cup worn" } };
+        return f;
+    }
+
+    private async Task SetMode(RobotDto r, RobotMode m)
+    {
+        await Wms.CommandAsync(sp => sp.Get<RobotService>().SetModeAsync(r.Id, new SetRobotModeRequest(m, "console")), $"{r.Id} → {m}.");
+        await LoadAsync();
+    }
+
+    private async Task Fault(RobotDto r, RobotForm f)
+    {
+        await Wms.CommandAsync(sp => sp.Get<RobotService>().ReportFaultAsync(r.Id, new RobotFaultRequest(f.Code, f.Text, "console")), $"{r.Id}: fault {f.Code} reported.");
+        await LoadAsync();
+    }
+
+    private async Task Clear(RobotDto r)
+    {
+        await Wms.CommandAsync(sp => sp.Get<RobotService>().ClearFaultAsync(r.Id, "console"), $"{r.Id}: fault cleared.");
+        await LoadAsync();
+    }
+
+    private async Task Next(RobotDto r, RobotForm f)
+    {
+        f.Task = await Wms.CommandAsync(sp => sp.Get<RobotService>().NextTaskAsync(r.Id));
+        if (f.Task is null) Notifications.Info(r.Available ? $"{r.Id} has nothing to do right now." : $"{r.Id} gets no work while it is {(r.State == RobotState.Fault ? "faulted" : r.Mode.ToString())}.");
+        await LoadAsync();
+    }
+
+    private async Task Complete(RobotDto r, RobotForm f)
+    {
+        var done = await Wms.CommandAsync(sp => sp.Get<RobotService>().CompleteTaskAsync(r.Id, f.Task!.Ref));
+        if (done is not null) Notifications.Info($"{r.Id}: {done.Description}.");
+        f.Task = null;
+        await LoadAsync();
+    }
+
+    private async Task ResetStats()
+    {
+        await Wms.CommandAsync(sp => sp.Get<RobotService>().ResetStatisticsAsync("console"), "Robot figures reset.");
+        await LoadAsync();
+    }
+
+    [Inject] private Notifications Notifications { get; set; } = null!;
+}

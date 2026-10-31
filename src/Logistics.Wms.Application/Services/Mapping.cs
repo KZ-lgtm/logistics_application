@@ -18,6 +18,16 @@ internal static class Mapping
     public static ExceptionItemDto ToDto(this ExceptionItem e) => new(
         e.Id, e.PickTaskId, e.Sku.Code, e.OrderId, e.Reason, e.ReadBarcode, e.Disposition, e.CreatedAt, e.ResolvedAt, e.ResolvedBy);
 
+    public static string Describe(this AsrsTaskKind kind) => kind switch
+    {
+        AsrsTaskKind.Retrieve => "retrieve",
+        AsrsTaskKind.Store => "store",
+        AsrsTaskKind.ReturnToRestock => "empty bin to restock",
+        AsrsTaskKind.RackToRestock => "empty bin to restock",
+        AsrsTaskKind.StoreRestocked => "store refilled",
+        _ => kind.ToString(),
+    };
+
     public static string Describe(this AsrsTaskKind kind, bool source, string? slot) => (kind, source) switch
     {
         (AsrsTaskKind.Retrieve or AsrsTaskKind.RackToRestock, true) => $"rack {slot}",

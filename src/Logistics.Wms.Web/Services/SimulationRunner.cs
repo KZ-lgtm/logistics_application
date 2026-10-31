@@ -8,11 +8,25 @@ public sealed class SimulationRunner(WmsClient wms, SimulationState state)
 {
     public SimulationState State => state;
     public bool Running => state.Running;
+    /// <summary>The live 3D cell drives the WMS; the round-based simulator must not run at the same time.</summary>
+    public bool TwinActive { get; private set; }
     public double LastRoundMs { get; private set; }
 
     public event Action? Changed;
 
-    public void Start() { state.Running = true; Changed?.Invoke(); }
+    public void Start()
+    {
+        if (TwinActive) return;
+        state.Running = true;
+        Changed?.Invoke();
+    }
+
+    public void SetTwinActive(bool active)
+    {
+        TwinActive = active;
+        if (active) state.Running = false;
+        Changed?.Invoke();
+    }
 
     public void Stop() { state.Running = false; Changed?.Invoke(); }
 

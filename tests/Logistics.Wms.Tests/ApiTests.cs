@@ -64,6 +64,23 @@ public class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Robots_can_be_faulted_and_dispatched_over_http()
+    {
+        var client = factory.CreateClient();
+        var robots = await client.GetFromJsonAsync<List<RobotDto>>("/api/robots", Json);
+        Assert.Equal(5, robots!.Count);
+
+        var fault = await client.PostAsJsonAsync("/api/robots/S2/fault", new RobotFaultRequest("E-417", "cup worn"), Json);
+        Assert.Equal(RobotState.Fault, (await fault.Content.ReadFromJsonAsync<RobotDto>(Json))!.State);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync("/api/robots/S2/tasks/next", null)).StatusCode);
+        Assert.True((await client.PostAsync("/api/robots/S2/fault/clear", null)).IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync("/api/robots/S2/fault/clear", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/robots/R9")).StatusCode);
+        var events = await client.GetFromJsonAsync<List<RobotEventDto>>("/api/robots/events?robot=S2", Json);
+        Assert.Equal(2, events!.Count);
+    }
+
+    [Fact]
     public async Task Simulation_steps_show_up_on_the_dashboard()
     {
         var client = factory.CreateClient();
@@ -72,6 +89,7 @@ public class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(8, dashboard!.Lanes.Count);
         Assert.True(dashboard.Throughput.ItemsPickedTotal > 0);
         Assert.Equal(2, dashboard.Stations.Count);
+        Assert.Equal(5, dashboard.Robots.Count);
         Assert.True((await client.GetAsync("/openapi/v1.json")).IsSuccessStatusCode);
         Assert.Contains("Logistics WMS", await client.GetStringAsync("/"));
     }

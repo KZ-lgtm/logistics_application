@@ -12,6 +12,8 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<WmsCommandGate>();
         services.AddSingleton(new SimulationState(simulation ?? new SimulationOptions()));
+        services.AddScoped<RobotTracker>();
+        services.AddScoped<RobotService>();
         services.AddScoped<DemandService>();
         services.AddScoped<OrderService>();
         services.AddScoped<AsrsService>();

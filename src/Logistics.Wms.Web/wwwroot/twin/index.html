@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live 3D cell · Logistics WMS</title>
+<style>
+  :root { --bg:#14181d; --panel:rgba(20,24,29,.86); --line:#2c343c; --txt:#e8ecef; --mute:#9aa4ad; --acc:#ff6a13; --ok:#35c26b; --bad:#ff4d4d; --wait:#ffb020; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font:13px/1.4 "Segoe UI",system-ui,sans-serif; overflow:hidden; }
+  #stage { position:absolute; inset:0; }
+  #view { width:100%; height:100%; display:block; touch-action:none; }
+  .panel { position:absolute; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; backdrop-filter:blur(6px); display:flex; flex-direction:column; }
+  /* long panels keep their header and scroll their body (max heights set by the engine, see fitPanels) */
+  .pb { min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#4a5561 transparent; }
+  #hdr { max-height:var(--rc-max-hdr, calc(100vh - 28px)); } #metrics { max-height:var(--rc-max-metrics, calc(100vh - 28px)); } #ctrl { max-height:var(--rc-max-ctrl, 50vh); }
+  #hdr { left:14px; top:14px; width:330px; }
+  #hdr h1 { margin:0 0 2px; font-size:16px; letter-spacing:.2px; }
+  #hdr .sub { color:var(--mute); font-size:12px; }
+  #steps { margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px; }
+  #steps li { display:flex; gap:8px; align-items:center; padding:5px 8px; border-radius:6px; color:var(--mute); border:1px solid transparent; }
+  #steps li b { display:inline-flex; width:18px; height:18px; border-radius:50%; background:#2c343c; color:var(--txt); font-size:11px; align-items:center; justify-content:center; flex:none; }
+  #steps li.active { color:var(--txt); background:rgba(255,106,19,.14); border-color:rgba(255,106,19,.5); }
+  #steps li.active b { background:var(--acc); }
+  .status { margin-top:10px; padding-top:8px; border-top:1px solid var(--line); }
+  .status .rlabel { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#ff8a45; }
+  .status div:not(.rlabel):not(.hud-sub) { font-weight:600; font-size:14px; }
+  .hud-sub { color:var(--mute); font-size:12px; }
+  .hud-sub.wait { color:var(--wait); font-weight:600; }
+  #metrics { right:14px; top:14px; width:300px; }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-bottom:1px dashed #262d34; }
+  .row:last-child { border-bottom:0; }
+  .row span:first-child { color:var(--mute); }
+  .row span:last-child { font-variant-numeric:tabular-nums; text-align:right; }
+  .bar { height:6px; background:#2c343c; border-radius:3px; overflow:hidden; margin:4px 0 8px; }
+  .bar i { display:block; height:100%; width:0; background:var(--acc); transition:width .1s linear; }
+  .bar i.slow { background:var(--wait); }
+  h2 { margin:8px 0 4px; font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--mute); }
+  #locks { display:flex; flex-direction:column; gap:4px; }
+  #locks span { padding:3px 8px; border-radius:5px; font-size:12px; background:#2c343c; }
+  #locks span.ok { background:rgba(53,194,107,.16); color:#8ee7ae; }
+  #locks span.bad { background:rgba(255,77,77,.16); color:#ff9a9a; }
+  #ctrl { left:14px; bottom:14px; max-width:calc(100vw - 28px); }
+  button { background:#242b33; color:var(--txt); border:1px solid var(--line); border-radius:7px; padding:8px 12px; font:inherit; cursor:pointer; min-height:44px; }
+  button:hover { border-color:#4a5561; } button.on { background:var(--acc); border-color:var(--acc); color:#fff; }
+  .seg { display:flex; } .seg button { border-radius:0; } .seg button:first-child { border-radius:7px 0 0 7px; } .seg button:last-child { border-radius:0 7px 7px 0; }
+  label { display:flex; align-items:center; gap:8px; color:var(--mute); }
+  input[type=range] { width:120px; accent-color:var(--acc); }
+  input.num { width:68px; background:#242b33; color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:6px; font:inherit; }
+  #legend { right:14px; bottom:14px; color:var(--mute); font-size:11px; }
+  #loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg); z-index:9; font-size:15px; color:var(--mute); }
+  .ph { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:-4px -6px 6px 0; }
+  .pt { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--mute); }
+  .pbtns { display:flex; gap:2px; }
+  .ib { min-height:0; width:28px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:transparent; border-color:transparent; color:var(--mute); }
+  .ib:hover { background:#2c343c; color:var(--txt); border-color:transparent; }
+  .ib svg { transition:transform .15s; }
+  .panel.collapsed .pb, #ctrl.collapsed .pb { display:none; }
+  .panel.collapsed .ph { margin-bottom:0; }
+  .panel.collapsed .ib.chev svg { transform:rotate(180deg); }
+  .panel.hidden { display:none; }
+  #ctrl .ph { margin-bottom:8px; }
+  #ctrl .pb { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #dock { position:absolute; top:14px; left:50%; transform:translateX(-50%); display:flex; gap:6px; }
+  #dock button { min-height:34px; padding:6px 12px; font-size:12px; background:var(--panel); backdrop-filter:blur(6px); }
+  #dock button:before { content:"+ "; color:var(--acc); }
+  @media (max-width:820px) { #metrics { display:none; } #hdr { width:calc(100vw - 28px); } #legend { display:none; } }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="view"></canvas></div>
+<div id="loading">Connecting to the WMS…</div>
+
+<section class="panel" id="hdr" data-rc-panel="hdr">
+  <div class="ph"><span class="pt" data-i18n="Process">Process</span><span class="pbtns"><button class="ib chev" data-collapse="hdr" aria-label="Collapse" title="Collapse"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button><button class="ib" data-hide="hdr" aria-label="Hide" title="Hide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+  <div class="pb">
+  <h1 data-i18n="Logistics application · cylinder ASRS → 3D vision picking → bar-code sortation into order cases · IRB 6700 + 2 × IRB 1300 + 2 × IRB 930">Logistics application · cylinder ASRS → 3D vision picking → bar-code sortation into order cases · IRB 6700 + 2 × IRB 1300 + 2 × IRB 930</h1>
+  <div class="sub" data-i18n="Orders on the put wall → R1 retrieves the bin from the cylinder shelf → picking loop → R2 / R3 pick with 3D vision onto the item belt → bar-code arch → S1 / S2 put into the order case → case out to packing · bins back to the shelf, empty bins to restock">Orders on the put wall → R1 retrieves the bin from the cylinder shelf → picking loop → R2 / R3 pick with 3D vision onto the item belt → bar-code arch → S1 / S2 put into the order case → case out to packing · bins back to the shelf, empty bins to restock</div>
+  <ol id="steps">
+    <li id="step-1"><b>1</b><span data-i18n="Rolling waves: each of the 8 put-wall lanes with an empty case takes the next order; the WMS adds up the open lines of all active orders per SKU">Rolling waves: each of the 8 put-wall lanes with an empty case takes the next order; the WMS adds up the open lines of all active orders per SKU</span></li>
+    <li id="step-2"><b>2</b><span data-i18n="R1 (IRB 6700, fork) retrieves a bin of the next open SKU from the cylinder shelf (26 columns × 8 levels, 144 slots) and sets it on the picking loop">R1 (IRB 6700, fork) retrieves a bin of the next open SKU from the cylinder shelf (26 columns × 8 levels, 144 slots) and sets it on the picking loop</span></li>
+    <li id="step-3"><b>3</b><span data-i18n="The bin runs through the east port to stop P2 (or P1 while P2 is busy); a bin without open demand runs straight back">The bin runs through the east port to stop P2 (or P1 while P2 is busy); a bin without open demand runs straight back</span></li>
+    <li id="step-4"><b>4</b><span data-i18n="R2 / R3 (IRB 1300, 4-cup vacuum) pick the cartons of every active order for that SKU — the 3D camera images the bin before each pick">R2 / R3 (IRB 1300, 4-cup vacuum) pick the cartons of every active order for that SKU — the 3D camera images the bin before each pick</span></li>
+    <li id="step-5"><b>5</b><span data-i18n="Cartons go onto the item belt into a free gap (the belt holds while the gripper is down); the bar-code arch reads each carton (no-read → exception tote)">Cartons go onto the item belt into a free gap (the belt holds while the gripper is down); the bar-code arch reads each carton (no-read → exception tote)</span></li>
+    <li id="step-6"><b>6</b><span data-i18n="S1 / S2 (IRB 930) take their cartons at the belt stop and put them into the order case on the put-wall lane">S1 / S2 (IRB 930) take their cartons at the belt stop and put them into the order case on the put-wall lane</span></li>
+    <li id="step-7"><b>7</b><span data-i18n="The bin returns on the inner lane; R1 stores it in the nearest free slot (dynamic slotting) — returns before retrievals">The bin returns on the inner lane; R1 stores it in the nearest free slot (dynamic slotting) — returns before retrievals</span></li>
+    <li id="step-8"><b>8</b><span data-i18n="Empty bins go out through the west port to the restock operator (refill, push-button) and come back in to be stored">Empty bins go out through the west port to the restock operator (refill, push-button) and come back in to be stored</span></li>
+    <li id="step-9"><b>9</b><span data-i18n="Finished order: the case runs out through the tunnel to the packing operator, an empty case runs in and the lane takes the next order">Finished order: the case runs out through the tunnel to the packing operator, an empty case runs in and the lane takes the next order</span></li>
+    <li id="step-10"><b>10</b><span data-i18n="Safety: one guarded zone, guard-locked doors north (cylinder passage) / south, 9 × OS32C restart prevention, muted curtains at the restock and put-wall tunnels">Safety: one guarded zone, guard-locked doors north (cylinder passage) / south, 9 × OS32C restart prevention, muted curtains at the restock and put-wall tunnels</span></li>
+  </ol>
+  <div id="status" class="status"><div class="rlabel" data-i18n="R1 · cylinder shelf (fork)">R1 · cylinder shelf (fork)</div><div id="hud-status">—</div><div id="hud-sub" class="hud-sub">—</div></div>
+  <div id="status-r2" class="status"><div class="rlabel" data-i18n="R2 · picking P1 (3D vision)">R2 · picking P1 (3D vision)</div><div id="hud-status-r2">—</div><div id="hud-sub-r2" class="hud-sub">—</div></div>
+  <div id="status-r3" class="status"><div class="rlabel" data-i18n="R3 · picking P2 (3D vision)">R3 · picking P2 (3D vision)</div><div id="hud-status-r3">—</div><div id="hud-sub-r3" class="hud-sub">—</div></div>
+  <div id="status-s1" class="status"><div class="rlabel" data-i18n="S1 · sortation, lanes S1-1…4">S1 · sortation, lanes S1-1…4</div><div id="hud-status-s1">—</div><div id="hud-sub-s1" class="hud-sub">—</div></div>
+  <div id="status-s2" class="status"><div class="rlabel" data-i18n="S2 · sortation, lanes S2-1…4">S2 · sortation, lanes S2-1…4</div><div id="hud-status-s2">—</div><div id="hud-sub-s2" class="hud-sub">—</div></div>
+  </div>
+</section>
+
+<section class="panel" id="metrics" data-rc-panel="metrics">
+  <div class="ph"><span class="pt" data-i18n="Metrics">Metrics</span><span class="pbtns"><button class="ib chev" data-collapse="metrics" aria-label="Collapse" title="Collapse"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button><button class="ib" data-hide="metrics" aria-label="Hide" title="Hide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+  <div class="pb">
+  <div class="row"><span data-i18n="Sim time">Sim time</span><span id="m-time">0.0 s</span></div>
+  <div class="row"><span data-i18n="Output">Output</span><span id="m-rate">—</span></div>
+  <div class="row"><span data-i18n="Orders">Orders</span><span id="m-orders">—</span></div>
+  <div class="row"><span data-i18n="WMS robots">WMS robots</span><span id="m-wms">—</span></div>
+  <div class="row"><span data-i18n="WMS link">WMS link</span><span id="m-wmscalls">—</span></div>
+  <div class="row"><span data-i18n="Demand">Demand</span><span id="m-demand">—</span></div>
+  <div class="row"><span data-i18n="Bin presentations">Bin presentations</span><span id="m-bins">—</span></div>
+  <div class="row"><span data-i18n="Cylinder shelf">Cylinder shelf</span><span id="m-rack">—</span></div>
+  <div class="row"><span data-i18n="R1 · shelf robot">R1 · shelf robot</span><span id="m-r1">—</span></div>
+  <div class="row"><span data-i18n="R2 / R3 · picking">R2 / R3 · picking</span><span id="m-pick">—</span></div>
+  <div class="row"><span data-i18n="3D images">3D images</span><span id="m-cam">—</span></div>
+  <div class="row"><span data-i18n="S1 / S2 · sortation">S1 / S2 · sortation</span><span id="m-sort">—</span></div>
+  <div class="row"><span data-i18n="Item belt">Item belt</span><span id="m-belt">—</span></div>
+  <div class="row"><span data-i18n="Put-wall lanes">Put-wall lanes</span><span id="m-lanes">—</span></div>
+  <div class="row"><span data-i18n="Bar code · exceptions">Bar code · exceptions</span><span id="m-exc">—</span></div>
+  <div class="row"><span data-i18n="Restock">Restock</span><span id="m-rst">—</span></div>
+  <div class="row"><span data-i18n="Restock operator">Restock operator</span><span id="m-op1">—</span></div>
+  <div class="row"><span data-i18n="Packing operator">Packing operator</span><span id="m-op2">—</span></div>
+  <h2 data-i18n="R1 · cylinder shelf (fork)">R1 · cylinder shelf (fork)</h2>
+  <h2 id="h-vmax" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}'>Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+  <div class="row"><span data-i18n="TCP speed">TCP speed</span><span id="m-tcpv">0 mm/s</span></div>
+  <div class="bar"><i id="tcp-bar"></i></div>
+  <div class="row"><span data-i18n="Joints">Joints</span><span id="m-q">—</span></div>
+  <div class="row"><span data-i18n="TCP">TCP</span><span id="m-tcp">—</span></div>
+  <div class="row"><span data-i18n="Last cycle">Last cycle</span><span id="m-cycle">—</span></div>
+  <h2 data-i18n="R2 · picking P1 (3D vision)">R2 · picking P1 (3D vision)</h2>
+  <h2 id="h-vmax-r2" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}'>Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+  <div class="row"><span data-i18n="TCP speed">TCP speed</span><span id="m-tcpv-r2">0 mm/s</span></div>
+  <div class="bar"><i id="tcp-bar-r2"></i></div>
+  <div class="row"><span data-i18n="Joints">Joints</span><span id="m-q-r2">—</span></div>
+  <div class="row"><span data-i18n="TCP">TCP</span><span id="m-tcp-r2">—</span></div>
+  <div class="row"><span data-i18n="Last cycle">Last cycle</span><span id="m-cycle-r2">—</span></div>
+  <h2 data-i18n="R3 · picking P2 (3D vision)">R3 · picking P2 (3D vision)</h2>
+  <h2 id="h-vmax-r3" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}'>Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+  <div class="row"><span data-i18n="TCP speed">TCP speed</span><span id="m-tcpv-r3">0 mm/s</span></div>
+  <div class="bar"><i id="tcp-bar-r3"></i></div>
+  <div class="row"><span data-i18n="Joints">Joints</span><span id="m-q-r3">—</span></div>
+  <div class="row"><span data-i18n="TCP">TCP</span><span id="m-tcp-r3">—</span></div>
+  <div class="row"><span data-i18n="Last cycle">Last cycle</span><span id="m-cycle-r3">—</span></div>
+  <h2 data-i18n="S1 · sortation, lanes S1-1…4">S1 · sortation, lanes S1-1…4</h2>
+  <h2 id="h-vmax-s1" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}'>Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+  <div class="row"><span data-i18n="TCP speed">TCP speed</span><span id="m-tcpv-s1">0 mm/s</span></div>
+  <div class="bar"><i id="tcp-bar-s1"></i></div>
+  <div class="row"><span data-i18n="Joints">Joints</span><span id="m-q-s1">—</span></div>
+  <div class="row"><span data-i18n="TCP">TCP</span><span id="m-tcp-s1">—</span></div>
+  <div class="row"><span data-i18n="Last cycle">Last cycle</span><span id="m-cycle-s1">—</span></div>
+  <h2 data-i18n="S2 · sortation, lanes S2-1…4">S2 · sortation, lanes S2-1…4</h2>
+  <h2 id="h-vmax-s2" data-i18n="Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)" data-i18n-args='{"v": 3000, "s": 150, "z": 100}'>Robot TCP speed (max {v} mm/s · {s} mm/s in {z} mm zone)</h2>
+  <div class="row"><span data-i18n="TCP speed">TCP speed</span><span id="m-tcpv-s2">0 mm/s</span></div>
+  <div class="bar"><i id="tcp-bar-s2"></i></div>
+  <div class="row"><span data-i18n="Joints">Joints</span><span id="m-q-s2">—</span></div>
+  <div class="row"><span data-i18n="TCP">TCP</span><span id="m-tcp-s2">—</span></div>
+  <div class="row"><span data-i18n="Last cycle">Last cycle</span><span id="m-cycle-s2">—</span></div>
+  <h2 data-i18n="Safety">Safety</h2>
+  <div class="row"><span data-i18n="Safety fence H{h}" data-i18n-args='{"h": 2000}'>Safety fence H{h}</span><span id="m-fence">—</span></div>
+  <div class="row"><span data-i18n="Safety door">Safety door</span><span id="m-door">—</span></div>
+  <div class="row"><span data-i18n="Light curtain {m}" data-i18n-args='{"m": "F3SG-PG \u00d7 3 (restock tunnel multi-beam, put wall 30 mm; muted while a bin / case passes)"}'>Light curtain {m}</span><span id="m-curtain">—</span></div>
+  <div class="row"><span data-i18n="Laser scanner {m} ×{n}" data-i18n-args='{"m": "OS32C", "n": 9}'>Laser scanner {m} ×{n}</span><span id="m-scanner">—</span></div>
+  <h2 data-i18n="Electrical">Electrical</h2>
+  <div class="row"><span data-i18n="Main control panel">Main control panel</span><span id="m-el-main">—</span></div>
+  <div class="row"><span data-i18n="Sub-cabinets / robot controllers">Sub-cabinets / robot controllers</span><span id="m-el-cab">—</span></div>
+  <div class="row"><span data-i18n="Junction boxes · field devices">Junction boxes · field devices</span><span id="m-el-jb">—</span></div>
+  <div class="row"><span data-i18n="Cable trays / floor trunks">Cable trays / floor trunks</span><span id="m-el-tray">—</span></div>
+  <div class="row"><span data-i18n="Max tray fill (≤ 40 %)">Max tray fill (≤ 40 %)</span><span id="m-el-fill">—</span></div>
+  <div class="row"><span data-i18n="Service areas clear">Service areas clear</span><span id="m-el-svc">—</span></div>
+  <div class="row"><span data-i18n="Manipulator cables">Manipulator cables</span><span id="m-el-rcab">—</span></div>
+  <div class="row"><span data-i18n="Electrical check">Electrical check</span><span id="m-el-check">—</span></div>
+  <h2 data-i18n="Interlocks (collision avoidance)">Interlocks (collision avoidance)</h2>
+  <div id="locks"><span id="il-zone">—</span><span id="il-estop">—</span><span id="il-image">—</span><span id="il-binstop">—</span><span id="il-belt">—</span><span id="il-lanes">—</span><span id="il-reach">—</span></div>
+  </div>
+</section>
+
+<section class="panel" id="ctrl" data-rc-panel="ctrl">
+  <div class="ph"><span class="pt" data-i18n="Controls">Controls</span><span class="pbtns"><button class="ib chev" data-collapse="ctrl" aria-label="Collapse" title="Collapse"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button><button class="ib" data-hide="ctrl" aria-label="Hide" title="Hide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+  <div class="pb">
+  <button id="b-run" class="on" aria-label="Pause or resume" data-i18n="Pause">Pause</button>
+  <button id="b-reset" title="Rebuild the cell from the WMS state">Resync with WMS</button>
+  <div class="seg" role="group" aria-label="Orders"><button id="b-gen" class="on" title="The WMS keeps 12 generated orders queued">Generate orders</button></div>
+  <label><span data-i18n="Robot speed">Robot speed</span> <input id="n-speed" class="num" type="number" min="10" max="100" step="5" value="100"> %</label>
+  <label><span data-i18n="Bar-code no-read">Bar-code no-read</span> <input id="n-no-read" class="num" type="number" min="0" max="20" step="0.5" value="0.5"> %</label>
+  <label><span data-i18n="Restock time per bin">Restock time per bin</span> <input id="n-refill-t" class="num" type="number" min="5" max="300" step="5" value="35"> s</label>
+  <label><span data-i18n="Lines per order (max)">Lines per order (max)</span> <input id="n-lines-max" class="num" type="number" min="1" max="6" step="1" value="4"></label>
+  <label><span data-i18n="Quantity per line (max)">Quantity per line (max)</span> <input id="n-qty-max" class="num" type="number" min="1" max="5" step="1" value="3"> pcs</label>
+  <label><span data-i18n="Sim speed">Sim speed</span> <input id="speed" type="range" min="0.25" max="8" step="0.25" value="1"><span id="speed-v">1.0×</span></label>
+  <div class="seg" role="group" aria-label="Mode"><button id="b-mode-zipf" class="on" data-i18n="Pareto demand (fast movers)">Pareto demand (fast movers)</button><button id="b-mode-flat" data-i18n="Flat demand (all SKUs alike)">Flat demand (all SKUs alike)</button></div>
+  <div class="seg" role="group" aria-label="Simulated events"><button id="b-tog-door" data-i18n="Cell door">Cell door</button><button id="b-tog-estop" data-i18n="E-stop">E-stop</button></div>
+  <div class="seg" role="group" aria-label="Camera view"><button id="b-view-iso" class="on" data-i18n="Iso">Iso</button><button id="b-view-top" data-i18n="Top">Top</button><button id="b-view-front" data-i18n="Front">Front</button><button id="b-view-cylinder" data-i18n="Cylinder shelf">Cylinder shelf</button><button id="b-view-picking" data-i18n="Picking">Picking</button><button id="b-view-sorting" data-i18n="Sortation">Sortation</button><button id="b-view-putwall" data-i18n="Put wall">Put wall</button><button id="b-view-restock" data-i18n="Restock">Restock</button></div>
+  <div class="seg" role="group" aria-label="Scan fields"><button id="b-scan" class="on" data-i18n="Scan fields">Scan fields</button></div>
+  <label><span data-i18n="Opacity">Opacity</span> <input id="scan-op" type="range" min="0" max="0.6" step="0.02" value="0.12" style="width:90px"></label>
+  <div class="seg" role="group" aria-label="Electrical layer"><button id="b-elec" class="on" data-i18n="Electrical">Electrical</button></div>
+  <div class="seg" role="group" aria-label="Language">
+    <button id="b-en" class="on">EN</button><button id="b-zh">繁中</button>
+  </div>
+  </div>
+</section>
+<div id="dock" data-rc-dock>
+  <button data-show="hdr"><span data-i18n="Process">Process</span></button>
+  <button data-show="metrics"><span data-i18n="Metrics">Metrics</span></button>
+  <button data-show="ctrl"><span data-i18n="Controls">Controls</span></button>
+</div>
+<div id="legend" data-i18n="Drag: orbit · Right-drag / Shift-drag: pan · Wheel: zoom">Drag: orbit · Right-drag / Shift-drag: pan · Wheel: zoom</div>
+
+<script src="cell/three.min.js"></script>
+<script src="cell/robot_glb.js"></script>
+<script src="cell/station_ui.js"></script>
+<script src="cell/app.js"></script>
+<script src="wms-station.js"></script>
+<script src="twin.js"></script>
+</body>
+</html>

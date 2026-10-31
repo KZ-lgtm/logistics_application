@@ -27,6 +27,11 @@ window.wms = {
         a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
     },
+    // the live 3D cell (twin/index.html, in an iframe) reaches the WMS through this bridge in the parent page
+    registerTwin: function (ref) {
+        window.wmsTwinBridge = { invoke: function () { return ref.invokeMethodAsync.apply(ref, arguments); } };
+    },
+    unregisterTwin: function () { delete window.wmsTwinBridge; },
     storageEstimate: function () {
         var n = 0;
         try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || '').length; } } catch (e) { }

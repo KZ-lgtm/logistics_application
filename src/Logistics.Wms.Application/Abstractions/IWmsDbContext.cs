@@ -16,6 +16,8 @@ public interface IWmsDbContext
     DbSet<ExceptionItem> ExceptionItems { get; }
     DbSet<InventoryTransaction> InventoryTransactions { get; }
     DbSet<CellState> CellState { get; }
+    DbSet<Robot> Robots { get; }
+    DbSet<RobotEvent> RobotEvents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

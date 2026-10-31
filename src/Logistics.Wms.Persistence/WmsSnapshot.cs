@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Logistics.Wms.Application.Services;
 using Logistics.Wms.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +25,8 @@ public sealed class WmsSnapshot
     public List<ExceptionItem> ExceptionItems { get; set; } = [];
     public List<InventoryTransaction> InventoryTransactions { get; set; } = [];
     public List<CellState> CellState { get; set; } = [];
+    public List<Robot> Robots { get; set; } = [];
+    public List<RobotEvent> RobotEvents { get; set; } = [];
 
     /// <summary>Rows only: computed (get-only) properties and navigations are left out, enums are written as names.</summary>
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -35,7 +38,7 @@ public sealed class WmsSnapshot
 
     private static readonly HashSet<Type> Entities =
         [typeof(Sku), typeof(StorageSlot), typeof(Bin), typeof(Order), typeof(OrderLine), typeof(PutWallLane), typeof(AsrsTask),
-         typeof(PickTask), typeof(ExceptionItem), typeof(InventoryTransaction), typeof(CellState)];
+         typeof(PickTask), typeof(ExceptionItem), typeof(InventoryTransaction), typeof(CellState), typeof(Robot), typeof(RobotEvent)];
 
     private static void RowsOnly(JsonTypeInfo info)
     {
@@ -61,6 +64,8 @@ public sealed class WmsSnapshot
         ExceptionItems = await db.ExceptionItems.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct),
         InventoryTransactions = await db.InventoryTransactions.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct),
         CellState = await db.CellState.AsNoTracking().ToListAsync(ct),
+        Robots = await db.Robots.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct),
+        RobotEvents = await db.RobotEvents.AsNoTracking().OrderBy(x => x.Id).ToListAsync(ct),
     };
 
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
@@ -90,7 +95,10 @@ public sealed class WmsSnapshot
         db.PickTasks.AddRange(PickTasks);
         db.ExceptionItems.AddRange(ExceptionItems);
         db.InventoryTransactions.AddRange(InventoryTransactions);
+        db.Robots.AddRange(Robots);
+        db.RobotEvents.AddRange(RobotEvents);
         await db.SaveChangesAsync(ct);
+        await WmsSeeder.EnsureRobotsAsync(db, SavedAt, ct);    // snapshots from before the robot registry
         db.ChangeTracker.Clear();
     }
 }

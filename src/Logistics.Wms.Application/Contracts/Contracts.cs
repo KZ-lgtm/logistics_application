@@ -80,6 +80,29 @@ public sealed record ExceptionItemDto(int Id, long PickTaskId, string SkuCode, i
 
 public sealed record ResolveExceptionRequest(ExceptionDisposition Disposition, string? User = null);
 
+// ---------------------------------------------------------------- robots
+public sealed record RobotDto(
+    string Id, string Model, RobotRole Role, string Assignment, string Tool, string Controller,
+    RobotMode Mode, RobotState State, bool Available, string? FaultCode, string? FaultText, DateTime? FaultSince,
+    string? TaskRef, string? TaskText, DateTime? TaskStartedAt,
+    int Cycles, double? AverageCycleSeconds, double LastCycleSeconds, double Utilization, double Availability, int Faults, DateTime StatsSince);
+
+public sealed record RobotEventDto(long Id, string RobotId, DateTime At, RobotEventKind Kind, string? Code, string Text, string? User);
+
+public sealed record SetRobotModeRequest(RobotMode Mode, string? User = null);
+
+public sealed record RobotFaultRequest(string Code, string? Text = null, string? User = null);
+
+/// <summary>A unit of work the WMS hands to one robot: an ASRS move (R1), a pick (R2 / R3) or a put into an order case (S1 / S2).</summary>
+public sealed record RobotTaskDto(
+    string RobotId, string Kind, string Ref, string Description, string? BinId, string? SkuCode, int? OrderId, string? LaneId, string? From, string? To);
+
+/// <summary>
+/// What the cell controller sees at R1's transfer heads when it asks for the next task. With it the WMS only stores a bin that is
+/// physically at a return head and only puts a bin on a free out head. Without it (null) every bin booked at a head counts.
+/// </summary>
+public sealed record AsrsHeads(string? PickReturnBin, string? RestockReturnBin, bool PickOutFree = true, bool RestockOutFree = true);
+
 // ---------------------------------------------------------------- dashboard
 public sealed record DashboardDto(
     DateTime At,
@@ -90,7 +113,10 @@ public sealed record DashboardDto(
     IReadOnlyList<StationDto> Stations,
     AsrsTaskDto? CurrentAsrsTask,
     ExceptionKpis Exceptions,
-    IReadOnlyList<SkuStockDto> LowStock);
+    IReadOnlyList<SkuStockDto> LowStock,
+    IReadOnlyList<RobotDto> Robots);
+
+public sealed record OrderFigures(int Queued, int Active, int Completed, double? AverageLeadTimeSeconds, int LastHour);
 
 public sealed record OrderKpis(int Queued, int Active, int Completed, int Cancelled, double? AverageLeadTimeSeconds);
 

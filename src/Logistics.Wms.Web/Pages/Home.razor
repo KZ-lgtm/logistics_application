@@ -53,20 +53,31 @@
                 </div>
             </section>
 
-            <section class="card span-4 stack">
-                <h2>R1 · cylinder shelf robot</h2>
-                @if (d.CurrentAsrsTask is { } r)
+            <section class="card span-4">
+                <div class="card-head"><h2>Robots</h2><a class="small" href="robots">details →</a></div>
+                @foreach (var r in d.Robots)
                 {
-                    <div class="task"><b>@r.Kind.Words()</b> bin @r.BinId <span class="muted">(@r.SkuCode · @r.BinQuantity pcs)</span><br /><span class="small muted">@r.From → @r.To</span></div>
+                    <div class="robot-row">
+                        <b>@r.Id</b>
+                        <div style="min-width: 0">
+                            <div class="small" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
+                                @if (r.State == RobotState.Fault) { <span class="bad">fault @r.FaultCode</span> }
+                                else if (r.Mode != RobotMode.Auto) { <span class="warn">@r.Mode</span> }
+                                else if (r.TaskText is not null) { @r.TaskText }
+                                else { <span class="muted">idle</span> }
+                            </div>
+                            <div class="small muted">@r.Assignment</div>
+                        </div>
+                        <div class="util" title="utilisation">
+                            <div class="small r num">@((r.Utilization * 100).ToString("F0")) %</div>
+                            <div class="bar accent"><i style="width:@((r.Utilization * 100).ToString("F0"))%"></i></div>
+                        </div>
+                    </div>
                 }
-                else
-                {
-                    <div class="muted">Idle</div>
-                }
-                <h2 style="margin-top: 6px">Picking stops</h2>
+                <h2 style="margin-top: 12px">Picking stops</h2>
                 @foreach (var st in d.Stations)
                 {
-                    <div class="stop row">
+                    <div class="stop row" style="margin-bottom: 6px">
                         <b>@st.Station</b>
                         @if (st.BinId is null) { <span class="muted">empty</span> }
                         else { <span>bin @st.BinId · @st.SkuCode · @st.BinQuantity pcs</span><span class="spacer"></span><span class="pill s-Pending">@st.Picks.Count picks</span> }

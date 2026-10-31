@@ -34,13 +34,14 @@ public sealed class SimulationState(SimulationOptions options)
 
 /// <summary>
 /// Stand-in for the cell controller (WCS / PLC) of the 3D simulation: every round each actor does at most one step through the
-/// public WMS services — R1 executes one ASRS task, the picking loop routes bins, R2 / R3 pick one carton each, the arch scans,
-/// S1 / S2 sort one carton each, the packing operator moves lane cases on, the restock operator refills one bin and the exception
-/// tote is cleared. Used by the background service (live demo) and the end-to-end tests.
+/// public WMS services. The five robots work through robot-centric dispatch (next task → done): R1 one ASRS task, R2 / R3 one pick
+/// each, S1 / S2 one carton each; the picking loop routes bins, the arch scans, the packing operator moves lane cases on, the restock
+/// operator refills one bin and the exception tote is cleared. A robot that is down does nothing; cartons waiting for a sorter that
+/// is down run off the belt. Used by the background service (live demo) and the end-to-end tests.
 /// </summary>
 public sealed class CellSimulator(
-    IWmsDbContext db, SimulationState state, OrderService orders, AsrsService asrs, PickingService picking, SortationService sortation,
-    PutWallService putWall, RestockService restock, ExceptionService exceptions)
+    IWmsDbContext db, SimulationState state, OrderService orders, RobotService robots, RobotTracker tracker, PickingService picking,
+    SortationService sortation, PutWallService putWall, RestockService restock, ExceptionService exceptions)
 {
     public async Task StepAsync(CancellationToken ct = default)
     {
@@ -49,7 +50,7 @@ public sealed class CellSimulator(
         if (o.GenerateOrders) await GenerateOrdersAsync(ct);
 
         // R1
-        if (await asrs.RequestNextTaskAsync(ct) is { } task) await asrs.CompleteTaskAsync(task.Id, ct);
+        if (await robots.NextTaskAsync(CellLayout.ShelfRobotId, null, ct) is { } task) await robots.CompleteTaskAsync(task.RobotId, task.Ref, ct);
 
         // picking loop: bins at the decision point, then arrivals at their stop
         foreach (var bin in await db.Bins.Where(b => b.Location == BinLocation.PickInbound).OrderBy(b => b.LastMovedAt).ThenBy(b => b.Id).Select(b => new { b.Id, b.Station }).ToListAsync(ct))
@@ -67,10 +68,7 @@ public sealed class CellSimulator(
 
         // R2 / R3: one carton each
         foreach (var s in Enum.GetValues<PickStation>())
-        {
-            var st = await picking.GetStationAsync(s, ct);
-            if (st.Picks.Count > 0) await picking.ConfirmPickAsync(st.Picks[0].PickTaskId, ct);
-        }
+            if (await robots.NextTaskAsync(CellLayout.PickerOf(s), null, ct) is { } pick) await robots.CompleteTaskAsync(pick.RobotId, pick.Ref, ct);
 
         // bar-code arch
         var tote = await db.CellState.SingleAsync(ct);
@@ -81,12 +79,17 @@ public sealed class CellSimulator(
             await sortation.ScanAsync(new ScanRequest(p.Id, state.Random.NextDouble() < o.NoReadRate ? null : code), ct);
         }
 
-        // S1 / S2: one carton each
+        // S1 / S2: one carton each; a sorter that is down lets its cartons run off the belt
         foreach (var sorter in Enum.GetValues<Sorter>())
         {
-            var next = await db.PickTasks.Where(p => p.Status == PickStatus.Routed && p.TargetSorter == sorter).OrderBy(p => p.Id)
-                .Select(p => new { p.Id, p.TargetLaneId }).FirstOrDefaultAsync(ct);
-            if (next is not null) await sortation.ConfirmSortAsync(new SortConfirmRequest(next.Id, next.TargetLaneId!), ct);
+            var id = CellLayout.SorterRobotOf(sorter);
+            if (await tracker.IsAvailableAsync(id, ct))
+            {
+                if (await robots.NextTaskAsync(id, null, ct) is { } put) await robots.CompleteTaskAsync(put.RobotId, put.Ref, ct);
+                continue;
+            }
+            foreach (var stuck in await db.PickTasks.Where(p => p.Status == PickStatus.Routed && p.TargetSorter == sorter).Select(p => p.Id).ToListAsync(ct))
+                await sortation.ReportMissedAsync(stuck, ct);
         }
 
         // packing operator: move every finished / swapped case one stage on
@@ -110,7 +113,8 @@ public sealed class CellSimulator(
         if (tote.ExceptionToteCount > 0) await exceptions.EmptyToteAsync(ct);
     }
 
-    private async Task GenerateOrdersAsync(CancellationToken ct)
+    /// <summary>Tops the order queue up to <see cref="SimulationOptions.QueueTarget"/> with generated orders.</summary>
+    public async Task GenerateOrdersAsync(CancellationToken ct = default)
     {
         var o = state.Options;
         var queued = await db.Orders.CountAsync(x => x.Status == OrderStatus.Queued, ct);

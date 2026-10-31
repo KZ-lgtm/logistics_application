@@ -18,10 +18,14 @@ builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
 builder.Services.AddWmsApplication(new SimulationOptions { StepMilliseconds = 400, Seed = Environment.TickCount });
 builder.Services.AddDbContext<WmsDbContext>(o => o.UseInMemoryDatabase("logistics-wms"));
 builder.Services.AddScoped<IWmsDbContext>(sp => sp.GetRequiredService<WmsDbContext>());
+var clock = new SimClock();
+builder.Services.AddSingleton(clock);
+builder.Services.AddSingleton<TimeProvider>(clock);     // replaces TimeProvider.System: WMS time follows the live 3D cell
 builder.Services.AddSingleton<Notifications>();
 builder.Services.AddSingleton<WmsClient>();
 builder.Services.AddSingleton<BrowserStore>();
 builder.Services.AddSingleton<SimulationRunner>();
+builder.Services.AddSingleton<TwinBridge>();
 
 var host = builder.Build();
 await host.Services.GetRequiredService<BrowserStore>().LoadAsync();

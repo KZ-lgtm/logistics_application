@@ -10,7 +10,7 @@ namespace Logistics.Wms.Web.Services;
 /// Keeps the in-memory WMS database in the browser's local storage: restored on start, saved a few seconds after a change.
 /// History is compacted automatically before the snapshot outgrows what local storage reliably holds.
 /// </summary>
-public sealed class BrowserStore(IServiceProvider services, IServiceScopeFactory scopes, WmsClient wms, IJSRuntime js, TimeProvider clock, Notifications notifications)
+public sealed class BrowserStore(IServiceProvider services, IServiceScopeFactory scopes, WmsClient wms, IJSRuntime js, SimClock clock, Notifications notifications)
 {
     // the github.io origin is shared by all of an account's Pages sites, so the key carries the application's name
     public const string Key = "logistics-wms/v1/snapshot";
@@ -53,6 +53,7 @@ public sealed class BrowserStore(IServiceProvider services, IServiceScopeFactory
     public async Task RestoreAsync(string json)
     {
         var snapshot = WmsSnapshot.FromJson(json);
+        clock.EnsureAtLeast(snapshot.SavedAt);
         using (await wms.LockAsync())
         {
             await using var scope = scopes.CreateAsyncScope();

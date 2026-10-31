@@ -7,9 +7,10 @@ namespace Logistics.Wms.Application.Services;
 
 /// <summary>
 /// The 8-lane put wall and rolling waves: every lane with an empty case in position takes the next queued order (priority, then
-/// FIFO); a finished case runs out to the packing operator, who swaps it for an empty one that runs back in.
+/// FIFO); a finished case runs out to the packing operator, who swaps it for an empty one that runs back in. Lanes of a sorter that
+/// is not available take no new order.
 /// </summary>
-public sealed class PutWallService(IWmsDbContext db, TimeProvider clock)
+public sealed class PutWallService(IWmsDbContext db, RobotTracker robots, TimeProvider clock)
 {
     public async Task<IReadOnlyList<LaneDto>> ListAsync(CancellationToken ct = default)
     {
@@ -27,8 +28,9 @@ public sealed class PutWallService(IWmsDbContext db, TimeProvider clock)
     /// <summary>Assigns queued orders to idle lanes. Saves nothing; the caller saves. Returns the activated orders.</summary>
     public async Task<List<Order>> ReleaseOrdersAsync(CancellationToken ct = default)
     {
-        var lanes = await db.Lanes.Where(l => l.State == LaneState.Ready && !l.Disabled && l.OrderId == null)
-            .OrderBy(l => l.Sorter).ThenBy(l => l.Index).ToListAsync(ct);
+        var (downSorters, _) = await robots.UnavailableSortersAsync(ct);
+        var lanes = (await db.Lanes.Where(l => l.State == LaneState.Ready && !l.Disabled && l.OrderId == null)
+            .OrderBy(l => l.Sorter).ThenBy(l => l.Index).ToListAsync(ct)).Where(l => !downSorters.Contains(l.Sorter)).ToList();
         if (lanes.Count == 0) return [];
         var queued = await db.Orders.Where(o => o.Status == OrderStatus.Queued)
             .OrderByDescending(o => o.Priority).ThenBy(o => o.CreatedAt).ThenBy(o => o.Id)

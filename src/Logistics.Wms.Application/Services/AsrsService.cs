@@ -13,8 +13,9 @@ namespace Logistics.Wms.Application.Services;
 /// <item>a retrieval for uncovered wave demand while the picking loop has room,</item>
 /// <item>an empty bin from the rack to the restock loop.</item>
 /// </list>
+/// R1 gets no new task while it is not in Auto mode or has a fault.
 /// </summary>
-public sealed class AsrsService(IWmsDbContext db, DemandService demand, TimeProvider clock)
+public sealed class AsrsService(IWmsDbContext db, DemandService demand, RobotTracker robots, TimeProvider clock)
 {
     public async Task<AsrsTaskDto?> GetCurrentTaskAsync(CancellationToken ct = default)
     {
@@ -30,13 +31,17 @@ public sealed class AsrsService(IWmsDbContext db, DemandService demand, TimeProv
         return result;
     }
 
-    /// <summary>Returns R1's assigned task, or assigns the next one; null when R1 has nothing to do.</summary>
-    public async Task<AsrsTaskDto?> RequestNextTaskAsync(CancellationToken ct = default)
+    /// <summary>
+    /// Returns R1's assigned task, or assigns the next one; null when R1 has nothing to do or is not available.
+    /// <paramref name="heads"/>: what the cell sees at the transfer heads (see <see cref="AsrsHeads"/>).
+    /// </summary>
+    public async Task<AsrsTaskDto?> RequestNextTaskAsync(AsrsHeads? heads = null, CancellationToken ct = default)
     {
         var current = await GetCurrentTaskAsync(ct);
         if (current is not null) return current;
+        if (!await robots.IsAvailableAsync(CellLayout.ShelfRobotId, ct)) return null;
 
-        var task = await DecideAsync(ct);
+        var task = await DecideAsync(heads, ct);
         if (task is null) return null;
 
         var bin = await db.Bins.SingleAsync(b => b.Id == task.BinId, ct);
@@ -46,7 +51,10 @@ public sealed class AsrsService(IWmsDbContext db, DemandService demand, TimeProv
         task.CreatedAt = clock.GetUtcNow().UtcDateTime;
         db.AsrsTasks.Add(task);
         await db.SaveChangesAsync(ct);
-        return await ToDtoAsync(task, ct);
+        var dto = await ToDtoAsync(task, ct);
+        await robots.BeginAsync(CellLayout.ShelfRobotId, $"asrs:{task.Id}", $"{task.Kind.Describe()} bin {dto.BinId}: {dto.From} → {dto.To}", ct);
+        await db.SaveChangesAsync(ct);
+        return dto;
     }
 
     /// <summary>R1 reports the task as done: the bin is at its destination.</summary>
@@ -97,6 +105,7 @@ public sealed class AsrsService(IWmsDbContext db, DemandService demand, TimeProv
         bin.LastMovedAt = now;
         task.Status = AsrsTaskStatus.Completed;
         task.CompletedAt = now;
+        await robots.EndAsync(CellLayout.ShelfRobotId, $"asrs:{task.Id}", ct);
         await db.SaveChangesAsync(ct);
         return await ToDtoAsync(task, ct);
     }
@@ -110,36 +119,41 @@ public sealed class AsrsService(IWmsDbContext db, DemandService demand, TimeProv
         if (task.ToSlotId is int to) (await db.Slots.SingleAsync(s => s.Id == to, ct)).Reserved = false;
         task.Status = AsrsTaskStatus.Cancelled;
         task.CompletedAt = clock.GetUtcNow().UtcDateTime;
+        await robots.AbortAsync(CellLayout.ShelfRobotId, $"asrs:{task.Id}", ct);
         await db.SaveChangesAsync(ct);
         return await ToDtoAsync(task, ct);
     }
 
-    private async Task<AsrsTask?> DecideAsync(CancellationToken ct)
+    private async Task<AsrsTask?> DecideAsync(AsrsHeads? heads, CancellationToken ct)
     {
+        var pickOutFree = heads?.PickOutFree ?? true;
+        var restockOutFree = heads?.RestockOutFree ?? true;
         var angle = (await db.CellState.SingleAsync(ct)).R1Angle;
         var restockCount = await db.Bins.CountAsync(b => b.Location == BinLocation.RestockStation || b.Location == BinLocation.RestockReturn, ct);
 
         // 1. picking-loop return head
-        var back = await db.Bins.Where(b => b.Location == BinLocation.PickReturn && !b.Reserved)
-            .OrderBy(b => b.LastMovedAt).ThenBy(b => b.Id).FirstOrDefaultAsync(ct);
+        var backQuery = db.Bins.Where(b => b.Location == BinLocation.PickReturn && !b.Reserved);
+        if (heads is not null) backQuery = backQuery.Where(b => b.Id == heads.PickReturnBin);
+        var back = await backQuery.OrderBy(b => b.LastMovedAt).ThenBy(b => b.Id).FirstOrDefaultAsync(ct);
         if (back is not null)
         {
-            if (back.IsEmpty && restockCount < CellLayout.RestockLoopCapacity)
+            if (back.IsEmpty && restockCount < CellLayout.RestockLoopCapacity && restockOutFree)
                 return new AsrsTask { Kind = AsrsTaskKind.ReturnToRestock, BinId = back.Id };
             if (await FreeSlotAsync(angle, ct) is { } slot)
                 return new AsrsTask { Kind = AsrsTaskKind.Store, BinId = back.Id, ToSlotId = slot.Id };
         }
 
         // 2. restock-loop return head
-        var refilled = await db.Bins.Where(b => b.Location == BinLocation.RestockReturn && !b.Reserved)
-            .OrderBy(b => b.LastMovedAt).ThenBy(b => b.Id).FirstOrDefaultAsync(ct);
+        var refilledQuery = db.Bins.Where(b => b.Location == BinLocation.RestockReturn && !b.Reserved);
+        if (heads is not null) refilledQuery = refilledQuery.Where(b => b.Id == heads.RestockReturnBin);
+        var refilled = await refilledQuery.OrderBy(b => b.LastMovedAt).ThenBy(b => b.Id).FirstOrDefaultAsync(ct);
         if (refilled is not null && await FreeSlotAsync(angle, ct) is { } restockSlot)
             return new AsrsTask { Kind = AsrsTaskKind.StoreRestocked, BinId = refilled.Id, ToSlotId = restockSlot.Id };
 
         // 3. retrieval for wave demand
         var onPickLoop = await db.Bins.CountAsync(b =>
             b.Location == BinLocation.PickInbound || b.Location == BinLocation.AtStation || b.Location == BinLocation.PickReturn, ct);
-        if (onPickLoop < CellLayout.PickLoopCapacity && await demand.NextNeededSkuAsync(ct) is int sku)
+        if (pickOutFree && onPickLoop < CellLayout.PickLoopCapacity && await demand.NextNeededSkuAsync(ct) is int sku)
         {
             var candidates = await db.Bins.Include(b => b.Slot)
                 .Where(b => b.SkuId == sku && b.Location == BinLocation.Rack && b.Quantity > 0 && !b.Reserved)
@@ -149,7 +163,7 @@ public sealed class AsrsService(IWmsDbContext db, DemandService demand, TimeProv
         }
 
         // 4. empty bin in the rack → restock
-        if (restockCount < CellLayout.RestockLoopRackLimit)
+        if (restockOutFree && restockCount < CellLayout.RestockLoopRackLimit)
         {
             var empty = await db.Bins.Where(b => b.Location == BinLocation.Rack && b.Quantity <= 0 && !b.Reserved)
                 .OrderBy(b => b.Id).FirstOrDefaultAsync(ct);

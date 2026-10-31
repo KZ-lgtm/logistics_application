@@ -74,7 +74,7 @@ public enum PickStatus
     Cancelled,
 }
 
-public enum ExceptionReason { NoRead, BarcodeMismatch, OrderNotActive, MissedSorter }
+public enum ExceptionReason { NoRead, BarcodeMismatch, OrderNotActive, MissedSorter, SorterUnavailable }
 
 public enum ExceptionDisposition { Open, ReturnedToStock, Scrapped }
 

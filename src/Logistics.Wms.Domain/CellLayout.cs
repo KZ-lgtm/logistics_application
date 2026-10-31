@@ -5,6 +5,8 @@ namespace Logistics.Wms.Domain;
 /// eight columns left out for the ports and the maintenance passage (144 slots), two picking stops, two sorters with four put-wall
 /// lanes each, a picking loop and a restock loop with limited buffer places, and an exception tote at the belt end.
 /// </summary>
+public sealed record RobotDefinition(string Id, string Model, RobotRole Role, PickStation? Station, Sorter? Sorter, string Tool, string Controller);
+
 public static class CellLayout
 {
     public const int Columns = 26;
@@ -29,6 +31,27 @@ public static class CellLayout
         [.. Enum.GetValues<Sorter>().SelectMany(s => Enumerable.Range(1, 4).Select(i => (s, i)))];
 
     public static string LaneId(Sorter sorter, int index) => $"{sorter}-{index}";
+
+    public static Sorter LaneSorter(string laneId) => laneId.StartsWith("S2", StringComparison.OrdinalIgnoreCase) ? Domain.Sorter.S2 : Domain.Sorter.S1;
+
+    public static IEnumerable<string> LaneIdsOf(Sorter sorter) => Lanes.Where(l => l.Sorter == sorter).Select(l => LaneId(l.Sorter, l.Index));
+
+    /// <summary>The five robots (models and tools as in the cell simulation).</summary>
+    public static readonly IReadOnlyList<RobotDefinition> Robots =
+    [
+        new("R1", "IRB 6700-150/3.20", RobotRole.ShelfRobot, null, null, "L-fork, bins ≤ 20 kg", "OmniCore V250XT"),
+        new("R2", "IRB 1300-12/1.4", RobotRole.Picker, PickStation.P1, null, "4-cup vacuum gripper, 3D camera", "OmniCore C30"),
+        new("R3", "IRB 1300-12/1.4", RobotRole.Picker, PickStation.P2, null, "4-cup vacuum gripper, 3D camera", "OmniCore C30"),
+        new("S1", "IRB 930-22/1.05", RobotRole.Sorter, null, Domain.Sorter.S1, "bellows cup", "OmniCore C30"),
+        new("S2", "IRB 930-22/1.05", RobotRole.Sorter, null, Domain.Sorter.S2, "bellows cup", "OmniCore C30"),
+    ];
+
+    public const string ShelfRobotId = "R1";
+
+    /// <summary>Picker serving a stop: R2 at P1, R3 at P2.</summary>
+    public static string PickerOf(PickStation station) => station == PickStation.P1 ? "R2" : "R3";
+
+    public static string SorterRobotOf(Sorter sorter) => sorter.ToString();
 
     /// <summary>Cartons per bin: two layers of a grid (S 4 × 4, M 3 × 3, L 2 × 2).</summary>
     public static int BinCapacity(SkuSize size) => size switch

@@ -45,6 +45,27 @@ public sealed class WmsClient(IServiceScopeFactory scopes, WmsCommandGate gate, 
         }
     }
 
+    /// <summary>Runs a command for the live 3D cell: refusals come back as an error text instead of a notification.</summary>
+    public async Task<(bool Ok, string? Error, T? Value)> TryCommandAsync<T>(Func<IServiceProvider, Task<T>> command)
+    {
+        try
+        {
+            T result;
+            using (await gate.EnterAsync())
+            {
+                await using var scope = scopes.CreateAsyncScope();
+                result = await command(scope.ServiceProvider);
+            }
+            Dirty = true;
+            Changed?.Invoke();
+            return (true, null, result);
+        }
+        catch (WmsException ex)
+        {
+            return (false, ex.Message, default);
+        }
+    }
+
     public Task<bool> CommandAsync(Func<IServiceProvider, Task> command, string? success = null) =>
         CommandAsync(async sp => { await command(sp); return true; }, success).ContinueWith(t => t.Result);
 

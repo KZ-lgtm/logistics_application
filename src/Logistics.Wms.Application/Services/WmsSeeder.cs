@@ -46,6 +46,7 @@ public static class WmsSeeder
         }));
         db.CellState.Add(new CellState());
         await db.SaveChangesAsync(ct);
+        await EnsureRobotsAsync(db, now, ct);
 
         // bins into a shuffled set of slots (SKUs mixed around the ring)
         var order = slots.OrderBy(_ => rng.Next()).ToList();
@@ -66,6 +67,20 @@ public static class WmsSeeder
                 });
             }
         }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Adds the robots that are missing (databases and snapshots created before the robot registry).</summary>
+    public static async Task EnsureRobotsAsync(IWmsDbContext db, DateTime now, CancellationToken ct = default)
+    {
+        var existing = (await db.Robots.Select(r => r.Id).ToListAsync(ct)).ToHashSet();
+        var missing = CellLayout.Robots.Where(d => !existing.Contains(d.Id)).ToList();
+        if (missing.Count == 0) return;
+        db.Robots.AddRange(missing.Select(d => new Robot
+        {
+            Id = d.Id, Model = d.Model, Role = d.Role, Station = d.Station, Sorter = d.Sorter, Tool = d.Tool, Controller = d.Controller,
+            Mode = RobotMode.Auto, State = RobotState.Idle, StatsSince = now,
+        }));
         await db.SaveChangesAsync(ct);
     }
 }

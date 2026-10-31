@@ -7,20 +7,28 @@ namespace Logistics.Wms.Application.Services;
 /// <summary>
 /// Wave demand: the WMS adds up the open lines of all active orders (one per put-wall lane) per SKU and asks R1 for bins until
 /// the bins already on their way to a picking stop cover it. Picks are allocated when a bin arrives at the stop, oldest order first.
+/// Orders on the lanes of a sorter that is down get no new picks until it is back (their cartons could not be put into the case).
 /// </summary>
-public sealed class DemandService(IWmsDbContext db, TimeProvider clock)
+public sealed class DemandService(IWmsDbContext db, RobotTracker robots, TimeProvider clock)
 {
+    /// <summary>Open lines of active orders whose sorter can take their cartons.</summary>
+    private async Task<IQueryable<OrderLine>> OpenLinesAsync(CancellationToken ct)
+    {
+        var (_, blockedLanes) = await robots.UnavailableSortersAsync(ct);
+        var q = db.OrderLines.Where(l => l.Order.Status == OrderStatus.Active && l.Quantity > l.Allocated);
+        return blockedLanes.Count == 0 ? q : q.Where(l => !blockedLanes.Contains(l.Order.LaneId!));
+    }
+
     /// <summary>Open (unallocated) quantity per SKU over all active orders.</summary>
     public async Task<Dictionary<int, int>> OpenQuantityBySkuAsync(CancellationToken ct = default) =>
-        await db.OrderLines
-            .Where(l => l.Order.Status == OrderStatus.Active && l.Quantity > l.Allocated)
+        await (await OpenLinesAsync(ct))
             .GroupBy(l => l.SkuId)
             .Select(g => new { g.Key, Open = g.Sum(l => l.Quantity - l.Allocated) })
             .ToDictionaryAsync(x => x.Key, x => x.Open, ct);
 
     public async Task<int> OpenQuantityAsync(int skuId, CancellationToken ct = default) =>
-        await db.OrderLines
-            .Where(l => l.SkuId == skuId && l.Order.Status == OrderStatus.Active && l.Quantity > l.Allocated)
+        await (await OpenLinesAsync(ct))
+            .Where(l => l.SkuId == skuId)
             .SumAsync(l => l.Quantity - l.Allocated, ct);
 
     /// <summary>Quantity per SKU in bins heading for a stop and not yet allocated (incl. a retrieval R1 is executing).</summary>
@@ -48,8 +56,7 @@ public sealed class DemandService(IWmsDbContext db, TimeProvider clock)
                 .Select(b => b.SkuId).Distinct().ToListAsync(ct))
             .ToHashSet();
 
-        var lines = await db.OrderLines
-            .Where(l => l.Order.Status == OrderStatus.Active && l.Quantity > l.Allocated)
+        var lines = await (await OpenLinesAsync(ct))
             .OrderBy(l => l.Order.ActivatedAt).ThenBy(l => l.OrderId).ThenBy(l => l.Id)
             .Select(l => l.SkuId)
             .ToListAsync(ct);
@@ -68,9 +75,9 @@ public sealed class DemandService(IWmsDbContext db, TimeProvider clock)
     public async Task<List<PickTask>> AllocateAsync(Bin bin, CancellationToken ct = default)
     {
         if (bin.Station is null) throw WmsException.Conflict($"Bin {bin.Id} is not at a picking stop.");
-        var lines = await db.OrderLines
+        var lines = await (await OpenLinesAsync(ct))
             .Include(l => l.Order)
-            .Where(l => l.SkuId == bin.SkuId && l.Order.Status == OrderStatus.Active && l.Quantity > l.Allocated)
+            .Where(l => l.SkuId == bin.SkuId)
             .OrderBy(l => l.Order.ActivatedAt).ThenBy(l => l.OrderId).ThenBy(l => l.Id)
             .ToListAsync(ct);
 

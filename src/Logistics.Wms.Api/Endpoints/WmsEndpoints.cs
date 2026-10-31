@@ -29,9 +29,24 @@ public static class WmsEndpoints
         var g = api.MapGroup("/asrs/tasks").WithTags("ASRS (R1)");
         g.MapGet("/", (AsrsService s, int? take, CancellationToken ct) => s.ListAsync(take ?? 50, ct));
         g.MapGet("/current", async (AsrsService s, CancellationToken ct) => await s.GetCurrentTaskAsync(ct) is { } t ? Results.Ok(t) : Results.NoContent());
-        g.MapPost("/next", async (AsrsService s, CancellationToken ct) => await s.RequestNextTaskAsync(ct) is { } t ? Results.Ok(t) : Results.NoContent());
+        g.MapPost("/next", async (AsrsService s, AsrsHeads? heads, CancellationToken ct) => await s.RequestNextTaskAsync(heads, ct) is { } t ? Results.Ok(t) : Results.NoContent());
         g.MapPost("/{id:int}/complete", (AsrsService s, int id, CancellationToken ct) => s.CompleteTaskAsync(id, ct));
         g.MapPost("/{id:int}/cancel", (AsrsService s, int id, CancellationToken ct) => s.CancelTaskAsync(id, ct));
+    }
+
+    public static void MapRobotEndpoints(this RouteGroupBuilder api)
+    {
+        var g = api.MapGroup("/robots").WithTags("Robots (R1, R2, R3, S1, S2)");
+        g.MapGet("/", (RobotService s, CancellationToken ct) => s.ListAsync(ct));
+        g.MapGet("/events", (RobotService s, string? robot, int? take, CancellationToken ct) => s.ListEventsAsync(robot, take ?? 100, ct));
+        g.MapPost("/statistics/reset", async (RobotService s, string? user, CancellationToken ct) => { await s.ResetStatisticsAsync(user, ct); return Results.NoContent(); });
+        g.MapGet("/{id}", (RobotService s, string id, CancellationToken ct) => s.GetAsync(id, ct));
+        g.MapPost("/{id}/mode", (RobotService s, string id, SetRobotModeRequest request, CancellationToken ct) => s.SetModeAsync(id, request, ct));
+        g.MapPost("/{id}/fault", (RobotService s, string id, RobotFaultRequest request, CancellationToken ct) => s.ReportFaultAsync(id, request, ct));
+        g.MapPost("/{id}/fault/clear", (RobotService s, string id, string? user, CancellationToken ct) => s.ClearFaultAsync(id, user, ct));
+        g.MapPost("/{id}/tasks/next", async (RobotService s, string id, AsrsHeads? heads, CancellationToken ct) =>
+            await s.NextTaskAsync(id, heads, ct) is { } t ? Results.Ok(t) : Results.NoContent());
+        g.MapPost("/{id}/tasks/{taskRef}/complete", (RobotService s, string id, string taskRef, CancellationToken ct) => s.CompleteTaskAsync(id, taskRef, ct));
     }
 
     public static void MapPickingEndpoints(this RouteGroupBuilder api)

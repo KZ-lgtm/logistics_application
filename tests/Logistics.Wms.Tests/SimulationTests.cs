@@ -80,7 +80,7 @@ public class SimulationTests
     private static async Task<Dictionary<int, int>> StockBySkuAsync(WmsDbContext db) =>
         await db.InventoryTransactions.GroupBy(t => t.SkuId).Select(g => new { g.Key, Q = g.Sum(t => t.Quantity) }).ToDictionaryAsync(x => x.Key, x => x.Q);
 
-    private static async Task AssertConsistentAsync(WmsDbContext db, bool ledgerHasAllPicks)
+    internal static async Task AssertConsistentAsync(WmsDbContext db, bool ledgerHasAllPicks)
     {
         var orders = await db.Orders.Include(o => o.Lines).ToListAsync();
         Assert.All(orders.Where(o => o.Status == OrderStatus.Completed), o => Assert.All(o.Lines, l => Assert.Equal(l.Quantity, l.Sorted)));

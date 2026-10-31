@@ -5,12 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Logistics.Wms.Application.Services;
 
-/// <summary>Picking loop and the two picking stops P1 / P2 (R2 / R3 with 3D vision and vacuum grippers).</summary>
-public sealed class PickingService(IWmsDbContext db, DemandService demand, TimeProvider clock)
+/// <summary>Picking loop and the two picking stops P1 / P2 (R2 at P1, R3 at P2, 3D vision and vacuum grippers).</summary>
+public sealed class PickingService(IWmsDbContext db, DemandService demand, RobotTracker robots, TimeProvider clock)
 {
     /// <summary>
     /// Decision point before P1, taken when the bin can leave it: P2 unless a bin is already at / heading to P2, else P1 (a bin for
-    /// P1 never waits behind one for P2). No open demand for the SKU any more → straight back to the return head.
+    /// P1 never waits behind one for P2); a stop whose picker is not available is skipped. No open demand for the SKU any more →
+    /// straight back to the return head.
     /// </summary>
     public async Task<BinRouteDto> RouteBinAsync(string binId, CancellationToken ct = default)
     {
@@ -28,7 +29,13 @@ public sealed class PickingService(IWmsDbContext db, DemandService demand, TimeP
 
         var busy = await db.Bins.Where(b => b.Id != bin.Id && b.Station != null && (b.Location == BinLocation.PickInbound || b.Location == BinLocation.AtStation))
             .Select(b => b.Station!.Value).ToListAsync(ct);
-        PickStation? station = !busy.Contains(PickStation.P2) ? PickStation.P2 : !busy.Contains(PickStation.P1) ? PickStation.P1 : null;
+        PickStation? station = null;
+        foreach (var candidate in new[] { PickStation.P2, PickStation.P1 })
+        {
+            if (busy.Contains(candidate) || !await robots.IsAvailableAsync(CellLayout.PickerOf(candidate), ct)) continue;
+            station = candidate;
+            break;
+        }
         if (station is null) return new BinRouteDto(bin.Id, RouteDecision.Wait, null, open);
 
         bin.Station = station;
@@ -36,7 +43,10 @@ public sealed class PickingService(IWmsDbContext db, DemandService demand, TimeP
         return new BinRouteDto(bin.Id, RouteDecision.Station, station, open);
     }
 
-    /// <summary>The bin stands at its stop: allocate its cartons to the wave. Without any allocation the bin is released at once.</summary>
+    /// <summary>
+    /// The bin stands at its stop: allocate its cartons to the wave. Without any allocation, or when the stop's picker is not available,
+    /// the bin is released at once.
+    /// </summary>
     public async Task<StationDto> ArriveAtStationAsync(string binId, PickStation station, CancellationToken ct = default)
     {
         var bin = await LoadBinAsync(binId, ct);
@@ -48,9 +58,15 @@ public sealed class PickingService(IWmsDbContext db, DemandService demand, TimeP
         bin.Station = station;
         bin.Location = BinLocation.AtStation;
         bin.LastMovedAt = clock.GetUtcNow().UtcDateTime;
-        var picks = await demand.AllocateAsync(bin, ct);
+        var picker = CellLayout.PickerOf(station);
+        var picks = await robots.IsAvailableAsync(picker, ct) ? await demand.AllocateAsync(bin, ct) : [];
         if (picks.Count == 0) MoveToReturn(bin, bin.LastMovedAt.Value);
         await db.SaveChangesAsync(ct);
+        if (picks.Count > 0)
+        {
+            await robots.BeginAsync(picker, $"pick:{picks[0].Id}", PickText(bin, picks[0]), ct);
+            await db.SaveChangesAsync(ct);
+        }
         return await GetStationAsync(station, ct, picks.Count == 0 ? null : bin);
     }
 
@@ -86,10 +102,14 @@ public sealed class PickingService(IWmsDbContext db, DemandService demand, TimeP
             BinQuantityAfter = bin.Quantity, Reference = $"order {pick.OrderId} / pick {pick.Id}",
         });
 
-        var pending = await db.PickTasks.CountAsync(p => p.BinId == bin.Id && p.Status == PickStatus.Pending && p.Id != pick.Id, ct);
-        if (pending == 0) MoveToReturn(bin, now);
+        var next = await db.PickTasks.Where(p => p.BinId == bin.Id && p.Status == PickStatus.Pending && p.Id != pick.Id)
+            .OrderBy(p => p.Sequence).ToListAsync(ct);
+        if (next.Count == 0) MoveToReturn(bin, now);
+        var picker = CellLayout.PickerOf(pick.Station);
+        await robots.EndAsync(picker, null, ct);
+        if (next.Count > 0) await robots.BeginAsync(picker, $"pick:{next[0].Id}", PickText(bin, next[0]), ct);
         await db.SaveChangesAsync(ct);
-        return new PickConfirmationDto(pick.Id, bin.Id, bin.Quantity, pending, pending == 0);
+        return new PickConfirmationDto(pick.Id, bin.Id, bin.Quantity, next.Count, next.Count == 0);
     }
 
     /// <summary>
@@ -124,10 +144,16 @@ public sealed class PickingService(IWmsDbContext db, DemandService demand, TimeP
             p.OrderLine.Allocated--;
         }
         var station = bin.Station.Value;
-        if (Math.Min(pending.Count, bin.Quantity) == 0) MoveToReturn(bin, now);
+        if (Math.Min(pending.Count, bin.Quantity) == 0)
+        {
+            MoveToReturn(bin, now);
+            await robots.AbortAsync(CellLayout.PickerOf(station), null, ct);
+        }
         await db.SaveChangesAsync(ct);
         return await GetStationAsync(station, ct);
     }
+
+    internal static string PickText(Bin bin, PickTask pick) => $"pick {bin.Sku?.Code} from bin {bin.Id} for order {pick.OrderId}";
 
     internal static void MoveToReturn(Bin bin, DateTime now)
     {

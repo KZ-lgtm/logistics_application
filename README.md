@@ -31,6 +31,7 @@ tests/
   Logistics.Wms.Tests           xUnit: unit, process-flow, long simulation runs (SQLite and in-memory), snapshots,
                                 history compaction, HTTP integration
 site/                           GitHub Pages landing page
+tools/make_wms_station.py       derives the live 3D cell's WMS-driven station from the cell simulation
 simulation/                     the original 3D cell simulation and risk assessment (unchanged)
 ```
 
@@ -50,6 +51,8 @@ Open the URL it prints and press **Run cell**, or create orders and work through
 
 * **Dashboard**: KPIs, put wall, R1 task, stops, storage, exceptions, low stock, and the simulator settings.
 * **Orders**: create (several lines, priority), filter by status, line details, cancel.
+* **Robots**: all five robots with mode (Auto / Manual / Maintenance), state, current task, cycles, cycle time, utilisation, availability, fault report / clear, dispatch by hand, and the robot event log.
+* **Live 3D cell**: the 3D cell of `robot_cell.html` driven by the WMS (see [Live 3D cell](#live-3d-cell)). A robot bar lets you inject faults and change modes while you watch.
 * **Cell operations**: every cell event as a button, in process order: R1 task done or cancelled, decision point, arrival at a stop, pick confirmation, 3D count correction, scan (OK / no-read / wrong code), sort, missed carton, lane steps, restock (fill level, new SKU), exception disposition.
 * **Inventory**: stock per SKU, new SKUs, bins with cycle counts, the stock ledger.
 * **Cylinder shelf**: top view of all 144 slots coloured by fill, R1's heading, slot details, block/unblock.
@@ -90,6 +93,24 @@ dotnet test
 | Restock operator | `GET /api/restock`, `POST /api/restock/{bin}/complete` | Refills the bin (default: full) and uses cartons returned from exceptions first. An empty bin may be given another SKU. |
 | Exceptions | `GET /api/exceptions`, `POST /api/exceptions/{id}/resolve`, `POST /api/exceptions/tote/empty` | *Returned to stock* puts the carton in the SKU's restock buffer; *scrapped* removes it. Tote fill level is tracked (capacity 25). |
 
+### The five robots
+
+| Robot | Model | Work the WMS dispatches | When it is down (fault, Manual, Maintenance) |
+|---|---|---|---|
+| **R1** | IRB 6700-150/3.20, L-fork | ASRS tasks: retrieve, store, empty bin to restock, store refilled bin | Gets no new task, so the shelf pauses. |
+| **R2** / **R3** | IRB 1300-12/1.4, 4-cup vacuum, 3D camera | The picks of the bin at its stop (R2 at P1, R3 at P2) | Its stop is skipped at the decision point. The bin standing there leaves with its open picks back in demand, and the other stop takes over. |
+| **S1** / **S2** | IRB 930-22/1.05, bellows cup | Cartons routed to it, into the cases of lanes S1-1…4 / S2-1…4 | Its lanes take no new order, and its orders get no new picks. A carton already on its way goes to the exception tote and is picked again once the sorter is back. |
+
+Each robot's controller can work through robot-centric dispatch: `POST /api/robots/{id}/tasks/next` returns the robot's next task, and
+`POST /api/robots/{id}/tasks/{ref}/complete` reports it done. The process endpoints above do the same, step by step.
+
+The WMS times every task from its start to its end. That gives cycles, average and last cycle time, utilisation (busy time ÷ time since
+the figures were reset), availability (1 − fault time ÷ that time) and fault counts (`GET /api/robots`). Faults and mode changes are
+reported with `POST /api/robots/{id}/fault`, `…/fault/clear` and `…/mode`, and are logged in `GET /api/robots/events`.
+
+R1's task request can carry what the cell sees at its transfer heads: which bin is at each return head, and whether each out head is
+free (`AsrsHeads`). With it, the WMS only stores a bin that is physically there, and only puts a bin on a free head.
+
 Also included:
 
 * **Inventory**: stock per SKU with reorder points, bins, slots (block/unblock for maintenance), cycle counts, and a full stock ledger (`/api/inventory/...`).
@@ -129,6 +150,28 @@ has no fallback to `index.html`, so the root `404.html` forwards deep links such
 To turn it on, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. Then push, or run the workflow from the
 Actions tab.
 
+## Live 3D cell
+
+The browser edition's **Live 3D cell** page runs the 3D simulation of `simulation/robot_cell.html` as the WMS's cell controller. It uses
+the same engine, robot models, kinematics, conveyors, operators and safety, loaded unchanged from `simulation/canvas/project/` (linked
+into the Web project, not copied).
+
+* `wwwroot/twin/wms-station.js` is the simulation's station with its built-in order logic replaced by calls to the WMS:
+  * R1 asks for its next task, sending the occupancy of its transfer heads, and reports each task done.
+  * The decision point asks where a bin goes.
+  * A bin arriving at a stop gets its picks allocated by the WMS.
+  * Every pick, scan, sort, lane step, restock and exception-tote emptying is booked in the WMS.
+  * Put-wall orders and robot availability are polled once a second.
+  * A robot the WMS reports as down stands still, and the WMS reroutes around it.
+* `tools/make_wms_station.py` derives it from `simulation/canvas/project/app.js`. Every edit must match exactly once, so if the simulation changes, rerun the tool:
+
+  ```bash
+  python3 tools/make_wms_station.py simulation/canvas/project/app.js src/Logistics.Wms.Web/wwwroot/twin/wms-station.js
+  ```
+* The 3D cell runs in an iframe. It reaches the WMS through a JS → .NET bridge (`TwinBridge`), and each call is one gated WMS command.
+* While the page is open, the WMS clock (`SimClock`) follows the simulation time: sim speed, pause. So cycle times, lead times and hourly figures match the 3D view.
+* On start, and on **Resync with WMS**, the cell is rebuilt from the WMS state: bins in their slots or on the loops, picks at the stops, cartons on the belt, lane states. So it can pick up after the round-based simulator or the console. The round-based simulator is switched off while the 3D cell runs.
+
 ## Configuration (`appsettings.json`)
 
 | Key | Default | |
@@ -141,7 +184,7 @@ Actions tab.
 ## Design notes and limitations
 
 * **Single command gate.** Every state-changing request (anything except GET) runs under one `WmsCommandGate`, and so does each simulator round. Decisions like "which bin does R1 fetch next" read and then change shared state, and a single cell produces only a few commands per second, so serialising them is the simplest correct choice. Several cells would need one gate per cell.
-* **Schema creation.** The schema is created with `EnsureCreated`. Add EF Core migrations before you need to evolve a production database.
+* **Schema creation.** The schema is created with `EnsureCreated`. Add EF Core migrations before you need to evolve a production database. A server `wms.db` created before the robot registry lacks its tables: delete it, and it is recreated on start. Browser snapshots from before get their robots added on load.
 * **No authentication** yet. Put the API behind the plant network or add authentication before exposing it.
 * Cell geometry (slot angles and heights, gap columns, capacities) lives in `CellLayout` and matches `simulation/canvas/project/app.js`.
 * **Browser edition.** It has no server and no shared state: each browser has its own cell, and local storage can be cleared by the user or the browser. Use JSON export for anything worth keeping. The in-memory provider has no indexes, which is why history is compacted early. `HistoryService` keeps lifetime KPIs and folds old ledger entries into opening balances, so stock stays exact. The first visit downloads the .NET runtime (about 10 MB); later visits load from the browser cache.

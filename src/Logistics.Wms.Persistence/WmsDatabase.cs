@@ -12,6 +12,8 @@ public static class WmsDatabase
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<WmsDbContext>();
         await db.Database.EnsureCreatedAsync(ct);
-        await WmsSeeder.SeedAsync(db, scope.ServiceProvider.GetRequiredService<TimeProvider>(), ct: ct);
+        var clock = scope.ServiceProvider.GetRequiredService<TimeProvider>();
+        await WmsSeeder.SeedAsync(db, clock, ct: ct);
+        await WmsSeeder.EnsureRobotsAsync(db, clock.GetUtcNow().UtcDateTime, ct);
     }
 }

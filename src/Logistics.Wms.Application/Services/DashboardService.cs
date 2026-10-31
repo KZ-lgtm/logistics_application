@@ -6,8 +6,22 @@ using Microsoft.EntityFrameworkCore;
 namespace Logistics.Wms.Application.Services;
 
 public sealed class DashboardService(
-    IWmsDbContext db, PutWallService putWall, PickingService picking, AsrsService asrs, InventoryService inventory, TimeProvider clock)
+    IWmsDbContext db, PutWallService putWall, PickingService picking, AsrsService asrs, InventoryService inventory, RobotService robots, TimeProvider clock)
 {
+    /// <summary>Order counts and last-hour figures only (cheap enough to poll every second).</summary>
+    public async Task<OrderFigures> GetOrderFiguresAsync(CancellationToken ct = default)
+    {
+        var hourAgo = clock.GetUtcNow().UtcDateTime.AddHours(-1);
+        var byStatus = await db.Orders.Where(o => o.Status != OrderStatus.Cancelled).GroupBy(o => o.Status)
+            .Select(g => new { g.Key, N = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.N, ct);
+        var lead = await db.Orders.Where(o => o.Status == OrderStatus.Completed && o.CompletedAt >= hourAgo)
+            .Select(o => new { o.ActivatedAt, o.CompletedAt }).ToListAsync(ct);
+        var archived = await db.CellState.Select(c => c.ArchivedOrdersCompleted).SingleAsync(ct);
+        return new OrderFigures(byStatus.GetValueOrDefault(OrderStatus.Queued), byStatus.GetValueOrDefault(OrderStatus.Active),
+            byStatus.GetValueOrDefault(OrderStatus.Completed) + archived,
+            lead.Count == 0 ? null : lead.Average(o => (o.CompletedAt!.Value - o.ActivatedAt!.Value).TotalSeconds), lead.Count);
+    }
+
     public async Task<DashboardDto> GetAsync(CancellationToken ct = default)
     {
         var now = clock.GetUtcNow().UtcDateTime;
@@ -52,6 +66,7 @@ public sealed class DashboardService(
             await asrs.GetCurrentTaskAsync(ct),
             new ExceptionKpis(await db.ExceptionItems.CountAsync(e => e.Disposition == ExceptionDisposition.Open, ct),
                 state.ExceptionToteCount, CellLayout.ExceptionToteCapacity, state.ExceptionToteCount >= CellLayout.ExceptionToteCapacity),
-            [.. (await inventory.GetStockAsync(ct)).Where(s => s.LowStock)]);
+            [.. (await inventory.GetStockAsync(ct)).Where(s => s.LowStock)],
+            await robots.ListAsync(ct));
     }
 }

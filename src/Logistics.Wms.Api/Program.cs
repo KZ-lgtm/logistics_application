@@ -29,6 +29,7 @@ app.MapOpenApi();
 var api = app.MapGroup("/api").AddEndpointFilter<CommandGateFilter>();
 api.MapOrderEndpoints();
 api.MapAsrsEndpoints();
+api.MapRobotEndpoints();
 api.MapPickingEndpoints();
 api.MapSortationEndpoints();
 api.MapPutWallEndpoints();

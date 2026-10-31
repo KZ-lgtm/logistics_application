@@ -71,6 +71,11 @@
     <div id="exc" style="margin-top: 10px"></div>
   </section>
 
+  <section class="span-12">
+    <h2>Robots</h2>
+    <div class="scroll"><table><thead><tr><th>Robot</th><th>Model</th><th>Assignment</th><th>Mode</th><th>State</th><th>Task</th><th>Cycles</th><th>Avg. cycle</th><th>Utilisation</th><th>Availability</th><th></th></tr></thead><tbody id="robots"></tbody></table></div>
+  </section>
+
   <section class="span-6">
     <h2>Orders</h2>
     <div class="row" style="margin-bottom: 8px">
@@ -130,6 +135,10 @@ async function refresh() {
       (d.lowStock.length ? ` · <span class="warn">${d.lowStock.length} SKU(s) at reorder point</span>` : '');
     $('orders').innerHTML = orders.map(x => `<tr><td>${x.id}</td><td>${esc(x.reference)}</td><td><span class="pill s-${x.status === 'Completed' ? 'Ready' : x.status === 'Active' ? 'Active' : 'AtOperator'}">${esc(x.status)}</span></td>
         <td>${esc(x.laneId ?? '')}</td><td>${x.sortedQuantity}/${x.totalQuantity}</td><td class="muted">${x.lines.map(l => `${esc(l.skuCode)}×${l.quantity}`).join(', ')}</td></tr>`).join('');
+    $('robots').innerHTML = d.robots.map(r => `<tr><td><b>${esc(r.id)}</b></td><td>${esc(r.model)}</td><td class="muted">${esc(r.assignment)}</td><td>${esc(r.mode)}</td>
+        <td class="${r.state === 'Fault' ? 'bad' : ''}">${esc(r.state)}${r.faultCode ? ' · ' + esc(r.faultCode) : ''}</td><td class="muted">${esc(r.taskText ?? '')}</td><td>${r.cycles}</td>
+        <td>${r.averageCycleSeconds == null ? '—' : r.averageCycleSeconds.toFixed(1) + ' s'}</td><td>${(r.utilization * 100).toFixed(0)} %</td><td>${(r.availability * 100).toFixed(1)} %</td>
+        <td>${r.state === 'Fault' ? `<button data-clear="${esc(r.id)}">Clear fault</button>` : `<button data-fault="${esc(r.id)}">Fault</button>`}</td></tr>`).join('');
     $('stock').innerHTML = stock.map(k => `<tr><td>${esc(k.code)}</td><td>${k.size}</td><td>${k.bins}</td><td>${k.inRack}</td><td>${k.onLoops}</td>
         <td class="${k.lowStock ? 'warn' : ''}">${k.total}</td><td>${k.openDemand + k.pendingPicks}</td><td>${k.reorderPoint}</td></tr>`).join('');
   } catch (err) { $('sim').textContent = 'WMS not reachable: ' + err.message; }
@@ -148,6 +157,11 @@ $('btn-order').onclick = async () => {
     $('o-ref').value = ''; $('o-lines').value = ''; refresh();
   } catch (err) { $('err').textContent = err.message; }
 };
+document.addEventListener('click', e => {
+  const f = e.target.dataset && e.target.dataset.fault, c = e.target.dataset && e.target.dataset.clear;
+  if (f) post('/robots/' + f + '/fault', { code: 'TEST', text: 'fault from the dashboard' }).then(refresh);
+  if (c) post('/robots/' + c + '/fault/clear').then(refresh);
+});
 refresh();
 setInterval(refresh, 1000);
 </script>

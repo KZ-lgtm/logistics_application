@@ -14,6 +14,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.14" />
   </ItemGroup>
 
+  <!-- the 3D cell engine, robot models and kinematics come unchanged from the cell simulation (simulation/canvas/project) -->
+  <ItemGroup>
+    <Content Include="..\..\simulation\canvas\project\three.min.js;..\..\simulation\canvas\project\robot_glb.js;..\..\simulation\canvas\project\station_ui.js;..\..\simulation\canvas\project\app.js"
+             Link="wwwroot\twin\cell\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Logistics.Wms.Application\Logistics.Wms.Application.csproj" />
     <ProjectReference Include="..\Logistics.Wms.Persistence\Logistics.Wms.Persistence.csproj" />

@@ -1,0 +1,84 @@
+@page "/live"
+@inherits WmsPage
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject TwinBridge Bridge
+@inject SimulationRunner Sim
+@inject SimClock Clock
+<PageTitle>Live 3D cell · Logistics WMS</PageTitle>
+
+<div class="live">
+<header class="topbar">
+    <h1 tabindex="-1">Live 3D cell</h1>
+    <span class="small muted twin-note">
+        The robots, conveyors and operators of <code>robot_cell.html</code> act as the WMS's cell controller: every decision comes from the WMS
+        and every event is booked in it, at the simulation's speed. It runs while this page is open; other pages show the results.
+    </span>
+</header>
+<div class="robot-bar" aria-label="Robots">
+    @foreach (var r in robots)
+    {
+        <div class="robot-chip @(r.State == RobotState.Fault ? "fault" : !r.Available ? "off" : "")">
+            <b>@r.Id</b>
+            <span class="small">@(r.State == RobotState.Fault ? $"fault {r.FaultCode}" : r.Mode != RobotMode.Auto ? r.Mode.ToString() : r.State == RobotState.Working ? "working" : "idle")</span>
+            @if (r.State == RobotState.Fault)
+            {
+                <button class="sm primary" @onclick="() => Clear(r)">Clear</button>
+            }
+            else
+            {
+                <button class="sm danger" @onclick="() => Fault(r)" title="Inject a fault: watch the WMS work around it">Fault</button>
+            }
+            <select class="sm" value="@r.Mode" @onchange="e => Mode(r, e.Value?.ToString())" aria-label="@r.Id mode">
+                @foreach (var m in Enum.GetValues<RobotMode>()) { <option value="@m">@m</option> }
+            </select>
+        </div>
+    }
+</div>
+<div class="twin-frame">
+    @if (registered)
+    {
+        <iframe src="twin/index.html" title="Live 3D cell driven by the WMS" allow="fullscreen"></iframe>
+    }
+</div>
+</div>
+
+@code {
+    private DotNetObjectReference<TwinBridge>? reference;
+    private bool registered;
+    private IReadOnlyList<RobotDto> robots = [];
+
+    protected override TimeSpan Throttle => TimeSpan.FromSeconds(1);
+
+    protected override async Task LoadAsync() => robots = await Wms.QueryAsync(sp => sp.Get<RobotService>().ListAsync());
+
+    private static string FaultCode(RobotDto r) => r.Role switch { RobotRole.ShelfRobot => "50056", RobotRole.Picker => "VAC-01", _ => "E-417" };
+
+    private Task Fault(RobotDto r) => Wms.CommandAsync(sp => sp.Get<RobotService>().ReportFaultAsync(r.Id,
+        new RobotFaultRequest(FaultCode(r), r.Role switch { RobotRole.ShelfRobot => "joint collision", RobotRole.Picker => "vacuum lost", _ => "cup worn" }, "live view")),
+        $"{r.Id}: fault injected. The WMS works around it.");
+
+    private Task Clear(RobotDto r) => Wms.CommandAsync(sp => sp.Get<RobotService>().ClearFaultAsync(r.Id, "live view"), $"{r.Id}: fault cleared.");
+
+    private Task Mode(RobotDto r, string? mode) =>
+        Enum.TryParse<RobotMode>(mode, out var m) ? Wms.CommandAsync(sp => sp.Get<RobotService>().SetModeAsync(r.Id, new SetRobotModeRequest(m, "live view")), $"{r.Id} → {m}.") : Task.CompletedTask;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        Sim.SetTwinActive(true);
+        reference = DotNetObjectReference.Create(Bridge);
+        await JS.InvokeVoidAsync("wms.registerTwin", reference);
+        registered = true;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        base.Dispose();
+        try { await JS.InvokeVoidAsync("wms.unregisterTwin"); } catch (JSDisconnectedException) { }
+        reference?.Dispose();
+        Clock.FollowRealTime();
+        Sim.SetTwinActive(false);
+    }
+}

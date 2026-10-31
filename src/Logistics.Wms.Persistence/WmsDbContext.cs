@@ -18,6 +18,8 @@ public sealed class WmsDbContext(DbContextOptions<WmsDbContext> options) : DbCon
     public DbSet<ExceptionItem> ExceptionItems => Set<ExceptionItem>();
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
     public DbSet<CellState> CellState => Set<CellState>();
+    public DbSet<Robot> Robots => Set<Robot>();
+    public DbSet<RobotEvent> RobotEvents => Set<RobotEvent>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -121,5 +123,27 @@ public sealed class WmsDbContext(DbContextOptions<WmsDbContext> options) : DbCon
         });
 
         b.Entity<CellState>(e => e.Property(x => x.Id).ValueGeneratedNever());
+
+        b.Entity<Robot>(e =>
+        {
+            e.Property(x => x.Id).HasMaxLength(4).ValueGeneratedNever();
+            e.Property(x => x.Model).HasMaxLength(64);
+            e.Property(x => x.Tool).HasMaxLength(64);
+            e.Property(x => x.Controller).HasMaxLength(64);
+            e.Property(x => x.FaultCode).HasMaxLength(32);
+            e.Property(x => x.FaultText).HasMaxLength(200);
+            e.Property(x => x.TaskRef).HasMaxLength(32);
+            e.Property(x => x.TaskText).HasMaxLength(200);
+            e.Ignore(x => x.IsAvailable);
+        });
+
+        b.Entity<RobotEvent>(e =>
+        {
+            e.Property(x => x.RobotId).HasMaxLength(4);
+            e.Property(x => x.Code).HasMaxLength(32);
+            e.Property(x => x.Text).HasMaxLength(300);
+            e.Property(x => x.User).HasMaxLength(64);
+            e.HasIndex(x => x.RobotId);
+        });
     }
 }
