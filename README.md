@@ -1,3 +1,4 @@
+https://kz-lgtm.github.io/logistics_application/wms/
 # Logistics application — Warehouse Management System (C# / .NET 10)
 
 A warehouse management system (WMS) for the goods-to-robot order-fulfilment cell in [`simulation/`](simulation/), the live 3D
