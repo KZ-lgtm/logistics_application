@@ -1,11 +1,16 @@
 @page "/orders"
 @inherits WmsPage
+@inject TwinService Twin
 <PageTitle>Orders · Logistics WMS</PageTitle>
 <PageHeader Title="Orders" />
 
 <div class="content">
     <section class="card">
         <h2>New order</h2>
+        @if (Twin.Started)
+        {
+            <p class="small muted" style="margin: -4px 0 10px"><span class="dot ok"></span> The live 3D cell is running: a new order is released to the put wall as soon as a lane has an empty case and is worked there. <a href="live">Watch it</a></p>
+        }
         <div class="form-grid" style="grid-template-columns: minmax(160px, 1fr) 110px">
             <div class="field"><span>Reference</span><input @bind="reference" placeholder="e.g. SHOP-10045" /></div>
             <div class="field"><span>Priority</span><input type="number" @bind="priority" title="Higher priorities are released to the put wall first" /></div>
@@ -66,6 +71,10 @@
                                 <td class="muted">@Fmt.Time(o.CreatedAt)</td>
                                 <td class="muted">@string.Join(", ", o.Lines.Select(l => $"{l.SkuCode}×{l.Quantity}"))</td>
                                 <td class="r">
+                                    @if (o.Status is OrderStatus.Queued or OrderStatus.Active)
+                                    {
+                                        <a class="btn sm" href="live?order=@o.Id" @onclick:stopPropagation title="Watch this order in the live 3D cell">Watch in 3D</a>
+                                    }
                                     @if (o.Status == OrderStatus.Queued || (o.Status == OrderStatus.Active && o.Lines.All(l => l.Picked == 0)))
                                     {
                                         <button class="sm danger" @onclick:stopPropagation @onclick="() => Cancel(o)">Cancel</button>

@@ -116,6 +116,7 @@ function mats() {
     shirt: mat(0x2f5fa8, { roughness: 0.8 }), shirt2: mat(0x2f8a4e, { roughness: 0.8 }), pants: mat(0x2a2f38, { roughness: 0.85 }), skin: mat(0xd9a882, { roughness: 0.7 }),
   });
   M.labs = LABELS.map(c => mat(c, { roughness: 0.6 }));
+  M.cartonFocus = mat(0xff8a3d, { roughness: 0.55, emissive: 0x7a2a00, emissiveIntensity: 0.7 });   // cartons of the order in focus
   for (const [k, z] of Object.entries(SIZE)) GEO[k] = { box: new THREE.BoxGeometry(z.l, z.w, z.h), lab: new THREE.BoxGeometry(z.l * 0.35, z.w * 0.5, 0.002) };
   GEO.binWallL = new THREE.BoxGeometry(BN.L, BN.wall, BN.H); GEO.binWallS = new THREE.BoxGeometry(BN.wall, BN.W - 2 * BN.wall, BN.H); GEO.binFloor = new THREE.BoxGeometry(BN.L - 0.02, BN.W - 0.02, BN.fl);
   GEO.binLab = new THREE.BoxGeometry(0.004, 0.14, 0.07);
@@ -128,7 +129,7 @@ function takeItem(sku) {
   const sz = SKUS[sku].size; let it = ITEMPOOL.find(q => q.free && q.sz === sz);
   if (!it) { const g = new THREE.Group(); RC.scene.add(g); const b = new THREE.Mesh(GEO[sz].box, M.carton); b.position.z = SIZE[sz].h / 2; b.castShadow = false; g.add(b);
     const lab = new THREE.Mesh(GEO[sz].lab, M.labs[0]); lab.position.set(SIZE[sz].l * 0.2, 0, SIZE[sz].h + 0.001); lab.castShadow = false; g.add(lab); it = { g, lab, sz, free: true }; ITEMPOOL.push(it); }
-  it.free = false; it.sku = sku; it.lab.material = M.labs[LABELS.indexOf(SKUS[sku].lab)]; it.g.visible = true; it.g.rotation.set(0, 0, 0);
+  it.free = false; it.sku = sku; it.g.children[0].material = M.carton; it.lab.material = M.labs[LABELS.indexOf(SKUS[sku].lab)]; it.g.visible = true; it.g.rotation.set(0, 0, 0);
   if (it.g.parent !== RC.scene) RC.scene.attach(it.g);
   Object.assign(it, { order: null, line: null, x: 0, read: false, target: '', state: '' }); return it;
 }
@@ -592,6 +593,7 @@ function updateBelt(dt) {
   for (const sid of ['s1', 's2']) { const c = ctx(sid), X = K.rob[sid].pickX;
     if (!halt && BELT.some(it => it.target === sid && it.x >= X - 1e-4 && robotOk(sid))) halt = 'sort';
     if (!halt && c.tcp.z < Z.sCarry - 0.02 && Math.hypot(c.tcp.x - X, c.tcp.y - B.y) < 0.25) halt = 'sort'; }
+  if (!halt && BELT.some(it => it.target === 'wait' && it.x >= K.rob.s1.pickX - 0.05)) halt = 'scan';
   if (!halt && EXC.n >= K.ex.cap && BELT.some(it => it.x > B.endX - 0.3)) halt = 'exception tote full';
   G.beltHalt = halt; if (halt) { S.stat.haltT += dt; }
   else for (const it of BELT) { let nx = it.x + B.v * dt; if (it.target === 's1' || it.target === 's2') { const X = K.rob[it.target].pickX; if (it.x <= X && nx > X) nx = X; } it.x = nx; }
@@ -603,6 +605,7 @@ function updateBelt(dt) {
     if (it.scanReq && it.scanReq.done) { const r = it.scanReq, v = r.ok ? r.value : null; it.scanReq = null;
       if (!v || v.target === 'Exception') { it.target = 'ex'; it.reason = v ? v.reason : 'refused'; } else { it.target = v.target.toLowerCase(); it.laneId = v.lane; } }
     if ((it.target === 's1' || it.target === 's2') && !robotOk(it.target)) { it.target = 'ex'; it.reason = 'sorter down'; wmsCall('Missed', it.pick); }
+    if ((it.target === 's1' || it.target === 's2') && it.x > K.rob[it.target].pickX + 0.01) { it.target = 'ex'; it.reason = 'missed'; wmsCall('Missed', it.pick); }
     if (it.x >= B.x1 - 0.02) { BELT.splice(i, 1); toException(it); continue; }
     it.g.position.set(it.x, B.y, B.z); }
   S.interlocks.belt = !Object.keys(PLACE).length || !!halt;
@@ -793,11 +796,60 @@ function loadWmsState() {
     it.g.position.set(it.x, BL.y, BL.z); BELT.push(it);
   }
 }
+/* label over each put-wall lane: lane, order reference, sorted / ordered cartons (orange: the order in focus) */
+function laneLabel(ln, w) {
+  const txt = w && w.reference ? [ln.id + ' · ' + w.reference, w.sorted + ' / ' + w.items + ' cartons'] : [ln.id, w ? laneWord(w.state) : ''];
+  const focus = !!(w && w.orderId && w.orderId === WMS.focus), key = txt.join('|') + focus;
+  if (ln.labelKey === key) return; ln.labelKey = key;
+  if (!ln.label) {
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 150;
+    const tex = new THREE.CanvasTexture(cv); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    sp.scale.set(0.4, 0.117, 1); sp.position.set(ln.x, PW.yIn + 0.45, PW.z + 0.62); sp.renderOrder = 20; RC.scene.add(sp); ln.label = { cv, tex, sp };
+  }
+  const { cv, tex } = ln.label, g = cv.getContext('2d');
+  g.clearRect(0, 0, cv.width, cv.height);
+  g.fillStyle = focus ? 'rgba(255,106,19,.92)' : 'rgba(20,24,29,.82)'; g.strokeStyle = focus ? '#ffd0b0' : '#4a5561'; g.lineWidth = 4;
+  g.beginPath(); if (g.roundRect) g.roundRect(4, 4, cv.width - 8, cv.height - 8, 18); else g.rect(4, 4, cv.width - 8, cv.height - 8); g.fill(); g.stroke();
+  g.fillStyle = '#ffffff'; g.font = '600 46px "Segoe UI", system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText(fit(g, txt[0], cv.width - 36), 18, 50);
+  g.fillStyle = focus ? '#fff3ea' : '#c6ccd2'; g.font = '40px "Segoe UI", system-ui, sans-serif'; g.fillText(txt[1], 18, 108);
+  if (w && w.items) { g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(18, 132, cv.width - 36, 8); g.fillStyle = focus ? '#ffffff' : '#35c26b'; g.fillRect(18, 132, (cv.width - 36) * Math.min(1, w.sorted / w.items), 8); }
+  tex.needsUpdate = true;
+}
+const fit = (g, t, w) => { if (g.measureText(t).width <= w) return t; while (t.length > 3 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
+const laneWord = st => ({ Ready: 'empty case, waiting for an order', Outbound: 'finished case → packing', AtOperator: 'at the packing operator', Inbound: 'empty case coming in' })[st] || st;
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+/* the orders panel at the top of the Process panel */
+function renderOrders() {
+  const el = document.getElementById('wms-orders'); if (!el) return;
+  const lanes = WMS.lanes || [], q = WMS.queue || [], o = WMS.orders || {};
+  const rows = lanes.map(w => { const f = w.orderId && w.orderId === WMS.focus, pct = w.items ? Math.round(100 * w.sorted / w.items) : 0;
+    return '<li class="' + (f ? 'focus' : '') + '" data-order="' + (w.orderId || '') + '"><b>' + esc(w.id) + '</b><span class="ref">' + (w.reference ? esc(w.reference) : '<i>' + esc(laneWord(w.state)) + '</i>') + '</span>'
+      + (w.reference ? '<span class="num">' + w.sorted + '/' + w.items + '</span><span class="pbar"><i style="width:' + pct + '%"></i></span>' : '') + '</li>'; }).join('');
+  const queue = q.length ? q.map(x => '<li class="' + (x.id === WMS.focus ? 'focus' : '') + '" data-order="' + x.id + '"><span class="ref">' + esc(x.reference) + (x.priority ? ' <em>P' + x.priority + '</em>' : '') + '</span><span class="lines">' + esc(x.lines) + '</span></li>').join('')
+    : '<li class="none">No order waiting. Create one on the Orders page' + (WMS.opts && WMS.opts.generateOrders ? '' : ' (or switch on Generate demo orders)') + '.</li>';
+  const html = '<div class="oh"><span>Orders on the put wall</span><span>' + (o.completed || 0) + ' done</span></div><ul class="lanes">' + rows + '</ul>'
+    + '<div class="oh"><span>Queue · ' + (o.queued || 0) + '</span><span>released when a lane has an empty case</span></div><ul class="queue">' + queue + '</ul>';
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+/* point the 3D view at an order: its lane label and its cartons turn orange, the camera goes to the put wall */
+WMS.focusOrder = id => {
+  WMS.focus = id || null;
+  for (const w of WMS.lanes || []) { const ln = LANES.find(l => l.id === w.id); if (ln) laneLabel(ln, w); }
+  renderOrders();
+  if (WMS.focus && (WMS.lanes || []).some(w => w.orderId === WMS.focus) && RC.setView) RC.setView('putwall');
+};
+function tintFocus() {
+  const f = WMS.focus, paint = it => { if (!it || !it.g) return; const m = f && it.orderId === f ? M.cartonFocus : M.carton; if (it.g.children[0].material !== m) it.g.children[0].material = m; };
+  for (const it of BELT) paint(it); for (const ln of LANES) for (const it of ln.items) paint(it); for (const c of RC.ctxs) paint(c.item);
+}
 function applyPoll(p) {
   if (!p) return;
+  WMS.lanes = p.lanes || WMS.lanes; WMS.queue = p.queue || WMS.queue || [];
+  for (const w of WMS.lanes || []) { const ln = LANES.find(l => l.id === w.id); if (ln) laneLabel(ln, w); }
   WMS.robots = {}; for (const r of p.robots || []) WMS.robots[r.id] = r;
   WMS.orders = p.orders || WMS.orders; WMS.opts = p.options || WMS.opts; WMS.tote = p.tote;
   if (WMS.opts) { S.noRead = WMS.opts.noReadRate; S.mode = WMS.opts.pareto ? 'zipf' : 'flat'; }
+  renderOrders();
   for (const w of p.lanes || []) { const ln = LANES.find(l => l.id === w.id); if (ln) applyLane(ln, w); }
   // a picker that went down: the WMS released the bin at its stop
   for (const k of ['P1', 'P2']) { const P = ST[k], b = binAt(P); if (b && !robotOk(P.rob) && !b.done && !(ctx(P.rob).held)) { b.picks = []; b.done = true; } }
@@ -889,7 +941,7 @@ RC.defineStation({
   update(dt) {
     if (!(dt >= 0)) return;                                                  // see stepTo in updateOp2
     for (const c of RC.ctxs) { if (c.waiting) c.waitAcc += dt; else c.busyAcc += dt; }
-    updateZone(dt); syncWms(); resolveArrivals(); updateLoop(LOOPS.pick, dt); updateLoop(LOOPS.rst, dt); updateCams(dt); updateBelt(dt); updateLanes(dt); updateOp1(dt); updateOp2(dt);
+    updateZone(dt); syncWms(); resolveArrivals(); tintFocus(); updateLoop(LOOPS.pick, dt); updateLoop(LOOPS.rst, dt); updateCams(dt); updateBelt(dt); updateLanes(dt); updateOp1(dt); updateOp2(dt);
     for (const k of ['P1', 'P2']) { const P = ST[k], b = binAt(P); G.blades[k].position.z = b && !b.done ? K.zc - 0.03 + 0.05 : K.zc - 0.08; }
     S.interlocks.reachAll = RC.ctxs.every(c => c.reach);
   },
@@ -912,6 +964,7 @@ RC.defineStation({
     out['m-rate'] = r ? ['{r} items / h sorted · {o} orders / h', { r: r.toFixed(0), o: ro ? ro.toFixed(0) : '—' }] : '— (measuring)';
     const wo = WMS.orders;
     out['m-orders'] = wo ? ['WMS: {d} done · {a} active · {q} queued · lead time {l} s', { d: wo.completed, a: wo.active, q: wo.queued, l: wo.leadSeconds ? wo.leadSeconds.toFixed(0) : '—' }] : '—';
+    out['m-ordrate'] = wo ? ['{n} orders in the last hour', { n: wo.lastHour }] : '—';
     const rs = Object.values(WMS.robots);
     out['m-wms'] = rs.length ? rs.map(r => r.id + ' ' + (r.state === 'Fault' ? '⚠ ' + (r.faultCode || 'fault') : r.mode !== 'Auto' ? r.mode.toLowerCase() : r.state === 'Working' ? 'working' : 'idle')).join(' · ') : '—';
     out['m-wmscalls'] = ['{n} calls · {e} refused', { n: WMS.calls, e: WMS.errors.length }];
@@ -1050,6 +1103,7 @@ RC.defineStation({
     "holds: sort": "保持：分揀取件",
     "holds: stop": "保持：停止",
     "holds: exception tote full": "保持：例外料盒已滿",
+    "holds: scan": "保持：等待 WMS 分揀指示",
     "ready": "待命",
     "out": "送出",
     "atOuter": "待換箱",
@@ -1072,6 +1126,8 @@ RC.defineStation({
     "{n} calls · {e} refused": "{n} 次呼叫 · {e} 次拒絕",
     "{e} to the exception tote ({n} in the tote) · {s} scans": "{e} 件至例外料盒（盒內 {n}）· 掃描 {s} 次",
     "WMS robots": "WMS 機器人",
+    "{n} orders in the last hour": "最近一小時 {n} 張訂單",
+    "Orders, last hour": "訂單（最近一小時）",
     "WMS link": "WMS 連線",
     "R1 · waiting for a task": "R1 · 等待任務",
     "asking the WMS for the next bin move": "向 WMS 索取下一個料箱搬移",

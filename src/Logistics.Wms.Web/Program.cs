@@ -15,7 +15,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
 
 // the same domain and WMS services as the server edition; the database is EF Core in-memory, saved to local storage
-builder.Services.AddWmsApplication(new SimulationOptions { StepMilliseconds = 400, Seed = Environment.TickCount });
+// demo orders off: the cell works the orders people create (the generator can be switched on in the simulator settings / 3D view)
+builder.Services.AddWmsApplication(new SimulationOptions { StepMilliseconds = 400, Seed = Environment.TickCount, GenerateOrders = false });
 builder.Services.AddDbContext<WmsDbContext>(o => o.UseInMemoryDatabase("logistics-wms"));
 builder.Services.AddScoped<IWmsDbContext>(sp => sp.GetRequiredService<WmsDbContext>());
 var clock = new SimClock();
@@ -26,6 +27,7 @@ builder.Services.AddSingleton<WmsClient>();
 builder.Services.AddSingleton<BrowserStore>();
 builder.Services.AddSingleton<SimulationRunner>();
 builder.Services.AddSingleton<TwinBridge>();
+builder.Services.AddSingleton<TwinService>();
 
 var host = builder.Build();
 await host.Services.GetRequiredService<BrowserStore>().LoadAsync();

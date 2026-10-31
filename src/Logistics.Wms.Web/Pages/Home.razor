@@ -17,10 +17,10 @@
             <div class="card row">
                 <div class="spacer">
                     <h3>The cell is empty</h3>
-                    <span class="muted">Press <b>Run cell</b> to let the simulator create orders and play the robots and operators, or create orders yourself and drive the cell step by step under <a href="operations">Cell operations</a>.</span>
+                    <span class="muted">Create orders on the Orders page; the cell works them as the WMS releases them to the put wall. Watch it in the <a href="live">live 3D cell</a>, run the quick simulator (<b>Run cell</b>), or drive the cell step by step under <a href="operations">Cell operations</a>. Demo orders can be switched on in the simulator settings below.</span>
                 </div>
-                <button class="primary" @onclick="Sim.Start">▶ Run cell</button>
-                <a class="btn" href="orders">Create an order</a>
+                <a class="btn primary" href="orders">Create an order</a>
+                <a class="btn" href="live">Open the 3D cell</a>
             </div>
         }
         <section class="card">

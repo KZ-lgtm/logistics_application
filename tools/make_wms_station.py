@@ -343,6 +343,84 @@ rep('''  update(dt) {
     if (!(dt >= 0)) return;                                                  // see stepTo in updateOp2
     for (const c of RC.ctxs) {''')
 
+# ---------------------------------------------------------------- the cell's orders: lane labels, orders panel, focus on an order
+rep('''  M.labs = LABELS.map(c => mat(c, { roughness: 0.6 }));''', '''  M.labs = LABELS.map(c => mat(c, { roughness: 0.6 }));
+  M.cartonFocus = mat(0xff8a3d, { roughness: 0.55, emissive: 0x7a2a00, emissiveIntensity: 0.7 });   // cartons of the order in focus''')
+rep('''  it.free = false; it.sku = sku; it.lab.material = M.labs[LABELS.indexOf(SKUS[sku].lab)];''',
+    '''  it.free = false; it.sku = sku; it.g.children[0].material = M.carton; it.lab.material = M.labs[LABELS.indexOf(SKUS[sku].lab)];''')
+rep('''function applyPoll(p) {
+  if (!p) return;''', '''/* label over each put-wall lane: lane, order reference, sorted / ordered cartons (orange: the order in focus) */
+function laneLabel(ln, w) {
+  const txt = w && w.reference ? [ln.id + ' · ' + w.reference, w.sorted + ' / ' + w.items + ' cartons'] : [ln.id, w ? laneWord(w.state) : ''];
+  const focus = !!(w && w.orderId && w.orderId === WMS.focus), key = txt.join('|') + focus;
+  if (ln.labelKey === key) return; ln.labelKey = key;
+  if (!ln.label) {
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 150;
+    const tex = new THREE.CanvasTexture(cv); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    sp.scale.set(0.4, 0.117, 1); sp.position.set(ln.x, PW.yIn + 0.45, PW.z + 0.62); sp.renderOrder = 20; RC.scene.add(sp); ln.label = { cv, tex, sp };
+  }
+  const { cv, tex } = ln.label, g = cv.getContext('2d');
+  g.clearRect(0, 0, cv.width, cv.height);
+  g.fillStyle = focus ? 'rgba(255,106,19,.92)' : 'rgba(20,24,29,.82)'; g.strokeStyle = focus ? '#ffd0b0' : '#4a5561'; g.lineWidth = 4;
+  g.beginPath(); if (g.roundRect) g.roundRect(4, 4, cv.width - 8, cv.height - 8, 18); else g.rect(4, 4, cv.width - 8, cv.height - 8); g.fill(); g.stroke();
+  g.fillStyle = '#ffffff'; g.font = '600 46px "Segoe UI", system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText(fit(g, txt[0], cv.width - 36), 18, 50);
+  g.fillStyle = focus ? '#fff3ea' : '#c6ccd2'; g.font = '40px "Segoe UI", system-ui, sans-serif'; g.fillText(txt[1], 18, 108);
+  if (w && w.items) { g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(18, 132, cv.width - 36, 8); g.fillStyle = focus ? '#ffffff' : '#35c26b'; g.fillRect(18, 132, (cv.width - 36) * Math.min(1, w.sorted / w.items), 8); }
+  tex.needsUpdate = true;
+}
+const fit = (g, t, w) => { if (g.measureText(t).width <= w) return t; while (t.length > 3 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
+const laneWord = st => ({ Ready: 'empty case, waiting for an order', Outbound: 'finished case → packing', AtOperator: 'at the packing operator', Inbound: 'empty case coming in' })[st] || st;
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+/* the orders panel at the top of the Process panel */
+function renderOrders() {
+  const el = document.getElementById('wms-orders'); if (!el) return;
+  const lanes = WMS.lanes || [], q = WMS.queue || [], o = WMS.orders || {};
+  const rows = lanes.map(w => { const f = w.orderId && w.orderId === WMS.focus, pct = w.items ? Math.round(100 * w.sorted / w.items) : 0;
+    return '<li class="' + (f ? 'focus' : '') + '" data-order="' + (w.orderId || '') + '"><b>' + esc(w.id) + '</b><span class="ref">' + (w.reference ? esc(w.reference) : '<i>' + esc(laneWord(w.state)) + '</i>') + '</span>'
+      + (w.reference ? '<span class="num">' + w.sorted + '/' + w.items + '</span><span class="pbar"><i style="width:' + pct + '%"></i></span>' : '') + '</li>'; }).join('');
+  const queue = q.length ? q.map(x => '<li class="' + (x.id === WMS.focus ? 'focus' : '') + '" data-order="' + x.id + '"><span class="ref">' + esc(x.reference) + (x.priority ? ' <em>P' + x.priority + '</em>' : '') + '</span><span class="lines">' + esc(x.lines) + '</span></li>').join('')
+    : '<li class="none">No order waiting. Create one on the Orders page' + (WMS.opts && WMS.opts.generateOrders ? '' : ' (or switch on Generate demo orders)') + '.</li>';
+  const html = '<div class="oh"><span>Orders on the put wall</span><span>' + (o.completed || 0) + ' done</span></div><ul class="lanes">' + rows + '</ul>'
+    + '<div class="oh"><span>Queue · ' + (o.queued || 0) + '</span><span>released when a lane has an empty case</span></div><ul class="queue">' + queue + '</ul>';
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+/* point the 3D view at an order: its lane label and its cartons turn orange, the camera goes to the put wall */
+WMS.focusOrder = id => {
+  WMS.focus = id || null;
+  for (const w of WMS.lanes || []) { const ln = LANES.find(l => l.id === w.id); if (ln) laneLabel(ln, w); }
+  renderOrders();
+  if (WMS.focus && (WMS.lanes || []).some(w => w.orderId === WMS.focus) && RC.setView) RC.setView('putwall');
+};
+function tintFocus() {
+  const f = WMS.focus, paint = it => { if (!it || !it.g) return; const m = f && it.orderId === f ? M.cartonFocus : M.carton; if (it.g.children[0].material !== m) it.g.children[0].material = m; };
+  for (const it of BELT) paint(it); for (const ln of LANES) for (const it of ln.items) paint(it); for (const c of RC.ctxs) paint(c.item);
+}
+function applyPoll(p) {
+  if (!p) return;
+  WMS.lanes = p.lanes || WMS.lanes; WMS.queue = p.queue || WMS.queue || [];
+  for (const w of WMS.lanes || []) { const ln = LANES.find(l => l.id === w.id); if (ln) laneLabel(ln, w); }''')
+rep('''  if (WMS.opts) { S.noRead = WMS.opts.noReadRate; S.mode = WMS.opts.pareto ? 'zipf' : 'flat'; }''',
+    '''  if (WMS.opts) { S.noRead = WMS.opts.noReadRate; S.mode = WMS.opts.pareto ? 'zipf' : 'flat'; }
+  renderOrders();''')
+rep('''    updateZone(dt); syncWms(); resolveArrivals();''', '''    updateZone(dt); syncWms(); resolveArrivals(); tintFocus();''')
+rep('''    out['m-orders'] = wo ? ['WMS: {d} done · {a} active · {q} queued · lead time {l} s', { d: wo.completed, a: wo.active, q: wo.queued, l: wo.leadSeconds ? wo.leadSeconds.toFixed(0) : '—' }] : '—';''',
+    '''    out['m-orders'] = wo ? ['WMS: {d} done · {a} active · {q} queued · lead time {l} s', { d: wo.completed, a: wo.active, q: wo.queued, l: wo.leadSeconds ? wo.leadSeconds.toFixed(0) : '—' }] : '—';
+    out['m-ordrate'] = wo ? ['{n} orders in the last hour', { n: wo.lastHour }] : '—';''')
+rep('''    "WMS robots": "WMS 機器人",''', '''    "WMS robots": "WMS 機器人",
+    "{n} orders in the last hour": "最近一小時 {n} 張訂單",
+    "Orders, last hour": "訂單（最近一小時）",''')
+
+# ---------------------------------------------------------------- the belt never runs ahead of the WMS
+# a carton waits for its routing (WMS reply) before the first sorter; one that passed its sorter anyway is reported as missed
+rep('''  if (!halt && EXC.n >= K.ex.cap && BELT.some(it => it.x > B.endX - 0.3)) halt = 'exception tote full';''',
+    '''  if (!halt && BELT.some(it => it.target === 'wait' && it.x >= K.rob.s1.pickX - 0.05)) halt = 'scan';
+  if (!halt && EXC.n >= K.ex.cap && BELT.some(it => it.x > B.endX - 0.3)) halt = 'exception tote full';''')
+rep('''    if ((it.target === 's1' || it.target === 's2') && !robotOk(it.target)) { it.target = 'ex'; it.reason = 'sorter down'; wmsCall('Missed', it.pick); }''',
+    '''    if ((it.target === 's1' || it.target === 's2') && !robotOk(it.target)) { it.target = 'ex'; it.reason = 'sorter down'; wmsCall('Missed', it.pick); }
+    if ((it.target === 's1' || it.target === 's2') && it.x > K.rob[it.target].pickX + 0.01) { it.target = 'ex'; it.reason = 'missed'; wmsCall('Missed', it.pick); }''')
+rep('''    "holds: exception tote full": "保持：例外料盒已滿",''', '''    "holds: exception tote full": "保持：例外料盒已滿",
+    "holds: scan": "保持：等待 WMS 分揀指示",''')
+
 # the station's own id, so the engine's remembered panel state does not collide with robot_cell.html
 rep('''  id: 'logistics_application', K,''', '''  id: 'logistics_application_wms', K,''')
 

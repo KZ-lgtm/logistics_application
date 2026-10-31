@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject BrowserStore Store
 @inject WmsClient Wms
+@inject TwinService Twin
 <div class="shell">
     <aside class="side">
         <div class="brand"><i></i><div>Logistics WMS<span>browser edition</span></div></div>
@@ -15,6 +16,10 @@
             <NavLink title="Cylinder shelf" aria-label="Cylinder shelf" href="shelf"><Icon Name="shelf" /><span>Cylinder shelf</span></NavLink>
             <NavLink title="Data &amp; storage" aria-label="Data &amp; storage" href="data"><Icon Name="data" /><span>Data &amp; storage</span></NavLink>
         </nav>
+        @if (Twin.Started)
+        {
+            <a class="twin-status" href="live" title="The 3D cell keeps working the orders while you use the other pages"><span class="dot ok"></span> 3D cell running</a>
+        }
         <div class="side-foot">
             <span>@(Store.LastSaved is null ? (Store.Restored ? "Restored from this browser" : "New cell, not saved yet") : $"Saved {Fmt.Time(Store.LastSaved)} · {Fmt.Bytes(Store.LastSize)}")</span>
             <span>Runs in your browser · <a href="../">project home</a></span>
@@ -26,6 +31,7 @@
             <div class="content" style="padding-bottom: 0"><div class="banner">@Store.Warning</div></div>
         }
         @Body
+        <TwinHost />
     </div>
 </div>
 <Toasts />
@@ -34,12 +40,14 @@
     protected override void OnInitialized()
     {
         Wms.Changed += Refresh;
+        Twin.Changed += Refresh;
         timer = new Timer(_ => Refresh(), null, 3500, 3500);
     }
     private void Refresh() => InvokeAsync(StateHasChanged);
     public void Dispose()
     {
         Wms.Changed -= Refresh;
+        Twin.Changed -= Refresh;
         timer?.Dispose();
     }
 }

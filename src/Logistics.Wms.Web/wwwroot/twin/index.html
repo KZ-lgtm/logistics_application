@@ -64,6 +64,21 @@
   #dock { position:absolute; top:14px; left:50%; transform:translateX(-50%); display:flex; gap:6px; }
   #dock button { min-height:34px; padding:6px 12px; font-size:12px; background:var(--panel); backdrop-filter:blur(6px); }
   #dock button:before { content:"+ "; color:var(--acc); }
+  /* orders of the WMS in the cell */
+  #wms-orders { margin-top:10px; display:flex; flex-direction:column; gap:4px; }
+  #wms-orders .oh { display:flex; justify-content:space-between; gap:8px; font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#ff8a45; margin-top:4px; }
+  #wms-orders .oh span:last-child { text-transform:none; letter-spacing:0; color:var(--mute); }
+  #wms-orders ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  #wms-orders li { display:grid; grid-template-columns:38px minmax(0,1fr) auto 46px; gap:6px; align-items:center; padding:3px 6px; border-radius:6px; border:1px solid transparent; font-size:12px; }
+  #wms-orders li[data-order]:not([data-order=""]) { cursor:pointer; } #wms-orders li[data-order]:not([data-order=""]):hover { background:#20262d; }
+  #wms-orders li.focus { background:rgba(255,106,19,.16); border-color:rgba(255,106,19,.6); }
+  #wms-orders .ref { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } #wms-orders .ref i { color:var(--mute); font-style:normal; }
+  #wms-orders .num { font-variant-numeric:tabular-nums; color:var(--mute); }
+  #wms-orders .pbar { height:5px; background:#2c343c; border-radius:3px; overflow:hidden; } #wms-orders .pbar i { display:block; height:100%; background:var(--ok); }
+  #wms-orders ul.queue li { grid-template-columns:minmax(0,1fr); gap:0; }
+  #wms-orders ul.queue .lines { color:var(--mute); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #wms-orders em { color:#ff8a45; font-style:normal; font-size:11px; }
+  #wms-orders li.none { color:var(--mute); display:block; }
   @media (max-width:820px) { #metrics { display:none; } #hdr { width:calc(100vw - 28px); } #legend { display:none; } }
 </style>
 </head>
@@ -72,10 +87,11 @@
 <div id="loading">Connecting to the WMS…</div>
 
 <section class="panel" id="hdr" data-rc-panel="hdr">
-  <div class="ph"><span class="pt" data-i18n="Process">Process</span><span class="pbtns"><button class="ib chev" data-collapse="hdr" aria-label="Collapse" title="Collapse"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button><button class="ib" data-hide="hdr" aria-label="Hide" title="Hide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
+  <div class="ph"><span class="pt">Orders &amp; process</span><span class="pbtns"><button class="ib chev" data-collapse="hdr" aria-label="Collapse" title="Collapse"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button><button class="ib" data-hide="hdr" aria-label="Hide" title="Hide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
   <div class="pb">
   <h1 data-i18n="Logistics application · cylinder ASRS → 3D vision picking → bar-code sortation into order cases · IRB 6700 + 2 × IRB 1300 + 2 × IRB 930">Logistics application · cylinder ASRS → 3D vision picking → bar-code sortation into order cases · IRB 6700 + 2 × IRB 1300 + 2 × IRB 930</h1>
   <div class="sub" data-i18n="Orders on the put wall → R1 retrieves the bin from the cylinder shelf → picking loop → R2 / R3 pick with 3D vision onto the item belt → bar-code arch → S1 / S2 put into the order case → case out to packing · bins back to the shelf, empty bins to restock">Orders on the put wall → R1 retrieves the bin from the cylinder shelf → picking loop → R2 / R3 pick with 3D vision onto the item belt → bar-code arch → S1 / S2 put into the order case → case out to packing · bins back to the shelf, empty bins to restock</div>
+  <div id="wms-orders"></div>
   <ol id="steps">
     <li id="step-1"><b>1</b><span data-i18n="Rolling waves: each of the 8 put-wall lanes with an empty case takes the next order; the WMS adds up the open lines of all active orders per SKU">Rolling waves: each of the 8 put-wall lanes with an empty case takes the next order; the WMS adds up the open lines of all active orders per SKU</span></li>
     <li id="step-2"><b>2</b><span data-i18n="R1 (IRB 6700, fork) retrieves a bin of the next open SKU from the cylinder shelf (26 columns × 8 levels, 144 slots) and sets it on the picking loop">R1 (IRB 6700, fork) retrieves a bin of the next open SKU from the cylinder shelf (26 columns × 8 levels, 144 slots) and sets it on the picking loop</span></li>
@@ -102,6 +118,7 @@
   <div class="row"><span data-i18n="Sim time">Sim time</span><span id="m-time">0.0 s</span></div>
   <div class="row"><span data-i18n="Output">Output</span><span id="m-rate">—</span></div>
   <div class="row"><span data-i18n="Orders">Orders</span><span id="m-orders">—</span></div>
+  <div class="row"><span data-i18n="Orders, last hour">Orders, last hour</span><span id="m-ordrate">—</span></div>
   <div class="row"><span data-i18n="WMS robots">WMS robots</span><span id="m-wms">—</span></div>
   <div class="row"><span data-i18n="WMS link">WMS link</span><span id="m-wmscalls">—</span></div>
   <div class="row"><span data-i18n="Demand">Demand</span><span id="m-demand">—</span></div>
@@ -176,7 +193,7 @@
   <div class="pb">
   <button id="b-run" class="on" aria-label="Pause or resume" data-i18n="Pause">Pause</button>
   <button id="b-reset" title="Rebuild the cell from the WMS state">Resync with WMS</button>
-  <div class="seg" role="group" aria-label="Orders"><button id="b-gen" class="on" title="The WMS keeps 12 generated orders queued">Generate orders</button></div>
+  <div class="seg" role="group" aria-label="Orders"><button id="b-gen" title="Demo orders: the WMS keeps 12 generated orders queued. Off: the cell works only the orders people create">Generate demo orders</button></div>
   <label><span data-i18n="Robot speed">Robot speed</span> <input id="n-speed" class="num" type="number" min="10" max="100" step="5" value="100"> %</label>
   <label><span data-i18n="Bar-code no-read">Bar-code no-read</span> <input id="n-no-read" class="num" type="number" min="0" max="20" step="0.5" value="0.5"> %</label>
   <label><span data-i18n="Restock time per bin">Restock time per bin</span> <input id="n-refill-t" class="num" type="number" min="5" max="300" step="5" value="35"> s</label>

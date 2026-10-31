@@ -52,7 +52,7 @@ Open the URL it prints and press **Run cell**, or create orders and work through
 * **Dashboard**: KPIs, put wall, R1 task, stops, storage, exceptions, low stock, and the simulator settings.
 * **Orders**: create (several lines, priority), filter by status, line details, cancel.
 * **Robots**: all five robots with mode (Auto / Manual / Maintenance), state, current task, cycles, cycle time, utilisation, availability, fault report / clear, dispatch by hand, and the robot event log.
-* **Live 3D cell**: the 3D cell of `robot_cell.html` driven by the WMS (see [Live 3D cell](#live-3d-cell)). A robot bar lets you inject faults and change modes while you watch.
+* **Live 3D cell**: the 3D cell of `robot_cell.html`, working the WMS's real orders (see [Live 3D cell](#live-3d-cell)). Once started it keeps running while you use the other pages. **Watch in 3D** on the Orders page points the view at an order. A robot bar lets you inject faults and change modes while you watch.
 * **Cell operations**: every cell event as a button, in process order: R1 task done or cancelled, decision point, arrival at a stop, pick confirmation, 3D count correction, scan (OK / no-read / wrong code), sort, missed carton, lane steps, restock (fill level, new SKU), exception disposition.
 * **Inventory**: stock per SKU, new SKUs, bins with cycle counts, the stock ledger.
 * **Cylinder shelf**: top view of all 144 slots coloured by fill, R1's heading, slot details, block/unblock.
@@ -170,6 +170,10 @@ into the Web project, not copied).
   ```
 * The 3D cell runs in an iframe. It reaches the WMS through a JS → .NET bridge (`TwinBridge`), and each call is one gated WMS command.
 * While the page is open, the WMS clock (`SimClock`) follows the simulation time: sim speed, pause. So cycle times, lead times and hourly figures match the 3D view.
+* **It works the WMS's orders, not a demo.** The orders you create on the Orders page are released to the put wall by the WMS and worked by the 3D cell. Every put-wall lane carries a label with its order reference and sorted / ordered cartons. The **Orders & process** panel lists the orders on the put wall and the queue in release order. Demo order generation is off by default; switch it on with **Generate demo orders**.
+* **It keeps running** once started, while you work on the other pages: nothing is drawn then, and it is stepped from a timer when the browser stops animation frames for the hidden view. Orders created anywhere flow through it. **Stop 3D cell** ends it. The sidebar shows when it runs, and the Cell operations console is locked meanwhile, because the 3D cell books those events itself.
+* **Watch in 3D** on an order points the view at it: its lane label and its cartons (on the belt, in the grippers, in the case) turn orange, and the camera goes to the put wall. Clicking an order in the panel does the same.
+* **The belt never runs ahead of the WMS:** a scanned carton waits before the first sorter until the WMS has routed it. A carton that has passed its sorter anyway is reported as missed and goes to the exception tote.
 * On start, and on **Resync with WMS**, the cell is rebuilt from the WMS state: bins in their slots or on the loops, picks at the stops, cartons on the belt, lane states. So it can pick up after the round-based simulator or the console. The round-based simulator is switched off while the 3D cell runs.
 
 ## Configuration (`appsettings.json`)

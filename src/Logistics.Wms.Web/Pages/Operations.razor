@@ -10,7 +10,12 @@
         makes. Work through the flow from left to right: R1 → picking loop → stops → belt &amp; arch → sorters → put wall.
         @if (Sim.Running) { <span class="warn">The simulator is running and will act on the same items. Stop it to work by hand.</span> }
     </p>
+    @if (Sim.TwinActive)
+    {
+        <div class="banner">The live 3D cell is the cell controller now: it books these events itself, so the buttons here are locked. <a href="live">Go to the 3D cell</a> or stop it there to work by hand.</div>
+    }
 
+    <fieldset class="ops" disabled="@Sim.TwinActive">
     <div class="grid">
         <!-- R1 -->
         <section class="card span-4 stack">
@@ -216,6 +221,7 @@
             }
         </section>
     </div>
+    </fieldset>
 </div>
 
 @code {

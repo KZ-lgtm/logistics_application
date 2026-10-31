@@ -32,6 +32,13 @@ window.wms = {
         window.wmsTwinBridge = { invoke: function () { return ref.invokeMethodAsync.apply(ref, arguments); } };
     },
     unregisterTwin: function () { delete window.wmsTwinBridge; },
+    // the 3D cell keeps running when its page is not shown (no rendering then), and can point at an order
+    twinCall: function (name, arg) {
+        var f = document.getElementById('wms-twin'), w = f && f.contentWindow;
+        if (w && typeof w[name] === 'function') w[name](arg); else if (f) (f.pending = f.pending || {})[name] = arg;
+    },
+    twinVisible: function (v) { window.wms.twinCall('wmsTwinVisible', v); },
+    twinFocus: function (id) { window.wms.twinCall('wmsTwinFocus', id); },
     storageEstimate: function () {
         var n = 0;
         try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || '').length; } } catch (e) { }

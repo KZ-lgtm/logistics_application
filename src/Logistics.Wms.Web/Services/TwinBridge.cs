@@ -13,22 +13,23 @@ namespace Logistics.Wms.Web.Services;
 /// sorting targets) and books every event (task done, pick, scan, sort, lane steps, restock, exception tote). Each call carries the
 /// simulation time, so the WMS clock follows the 3D cell, and runs as one WMS command. Replies are { ok, error, data }.
 /// </summary>
-public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState simulation)
+public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState simulation, TwinService twin)
 {
     public sealed record Reply(bool Ok, string? Error, object? Data);
 
     public sealed record TwinSku(string Code, string Size);
     public sealed record TwinBin(string Id, int Sku, int Qty, string Loc, int? Col, int? Level, string? Station, DateTime? Moved);
     public sealed record TwinPick(long Id, int OrderId);
-    public sealed record TwinLane(string Id, string State, int? OrderId, bool Disabled);
+    public sealed record TwinLane(string Id, string State, int? OrderId, bool Disabled, string? Reference = null, int Items = 0, int Sorted = 0);
+    public sealed record TwinQueued(int Id, string Reference, int Priority, int Items, string Lines);
     public sealed record TwinBeltItem(long Pick, int Sku, int OrderId, string Status, string? Sorter, string? Lane);
     public sealed record TwinRobot(string Id, bool Available, string Mode, string State, string? FaultCode, string? FaultText, string? Task, double Utilization, int Cycles);
     public sealed record TwinOrders(int Queued, int Active, int Completed, double? LeadSeconds, int LastHour);
     public sealed record TwinOptions(double NoReadRate, int MaxLines, int MaxQuantity, bool Pareto, bool GenerateOrders);
     public sealed record TwinInit(
         IReadOnlyList<TwinSku> Skus, IReadOnlyList<TwinBin> Bins, Dictionary<string, IReadOnlyList<TwinPick>> Stations, IReadOnlyList<TwinLane> Lanes,
-        IReadOnlyList<TwinBeltItem> Belt, int Tote, IReadOnlyList<TwinRobot> Robots, TwinOrders Orders, TwinOptions Options);
-    public sealed record TwinPoll(IReadOnlyList<TwinLane> Lanes, IReadOnlyList<TwinRobot> Robots, TwinOrders Orders, int Tote, TwinOptions Options);
+        IReadOnlyList<TwinBeltItem> Belt, int Tote, IReadOnlyList<TwinRobot> Robots, TwinOrders Orders, TwinOptions Options, IReadOnlyList<TwinQueued> Queue, int? Focus);
+    public sealed record TwinPoll(IReadOnlyList<TwinLane> Lanes, IReadOnlyList<TwinRobot> Robots, TwinOrders Orders, int Tote, TwinOptions Options, IReadOnlyList<TwinQueued> Queue);
     public sealed record TwinTask(int Id, string Kind, string BinId, string? FromSlot, string? ToSlot);
     public sealed record TwinRoute(string Decision, string? Station);
     public sealed record TwinScan(string Target, string? Lane, string? Reason);
@@ -59,7 +60,9 @@ public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState si
             (await db.CellState.SingleAsync()).ExceptionToteCount,
             await RobotsAsync(sp),
             await OrdersAsync(sp),
-            Options());
+            Options(),
+            await QueueAsync(sp),
+            twin.FocusOrderId);
     });
 
     /// <summary>Once a second: put-wall lanes, robots, order figures; tops up the order queue when the generator is on.</summary>
@@ -67,7 +70,8 @@ public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState si
     public Task<Reply> Poll(double t) => Run(t, async sp =>
     {
         if (simulation.Options.GenerateOrders) await sp.Get<CellSimulator>().GenerateOrdersAsync();
-        return new TwinPoll(await LanesAsync(sp), await RobotsAsync(sp), await OrdersAsync(sp), (await sp.Get<WmsDbContext>().CellState.SingleAsync()).ExceptionToteCount, Options());
+        return new TwinPoll(await LanesAsync(sp), await RobotsAsync(sp), await OrdersAsync(sp), (await sp.Get<WmsDbContext>().CellState.SingleAsync()).ExceptionToteCount, Options(),
+            await QueueAsync(sp));
     });
 
     [JSInvokable]
@@ -127,7 +131,7 @@ public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState si
     public Task<Reply> Lane(double t, string laneId, string laneEvent) => Run(t, async sp =>
     {
         var l = await sp.Get<PutWallService>().AdvanceAsync(laneId, Enum.Parse<LaneEvent>(laneEvent));
-        return new TwinLane(l.Id, l.State.ToString(), l.OrderId, l.Disabled);
+        return new TwinLane(l.Id, l.State.ToString(), l.OrderId, l.Disabled, l.OrderReference, l.OrderItems, l.SortedItems);
     });
 
     [JSInvokable]
@@ -171,7 +175,16 @@ public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState si
     }
 
     private static async Task<IReadOnlyList<TwinLane>> LanesAsync(IServiceProvider sp) =>
-        [.. (await sp.Get<PutWallService>().ListAsync()).Select(l => new TwinLane(l.Id, l.State.ToString(), l.OrderId, l.Disabled))];
+        [.. (await sp.Get<PutWallService>().ListAsync()).Select(l => new TwinLane(l.Id, l.State.ToString(), l.OrderId, l.Disabled, l.OrderReference, l.OrderItems, l.SortedItems))];
+
+    /// <summary>The next queued orders in release order (priority, then FIFO) and their lines.</summary>
+    private static async Task<IReadOnlyList<TwinQueued>> QueueAsync(IServiceProvider sp)
+    {
+        var orders = await sp.Get<WmsDbContext>().Orders.Include(o => o.Lines).ThenInclude(l => l.Sku)
+            .Where(o => o.Status == OrderStatus.Queued)
+            .OrderByDescending(o => o.Priority).ThenBy(o => o.CreatedAt).ThenBy(o => o.Id).Take(6).ToListAsync();
+        return [.. orders.Select(o => new TwinQueued(o.Id, o.Reference, o.Priority, o.TotalQuantity, string.Join(", ", o.Lines.Select(l => $"{l.Sku.Code}×{l.Quantity}"))))];
+    }
 
     private static async Task<IReadOnlyList<TwinRobot>> RobotsAsync(IServiceProvider sp) =>
         [.. (await sp.Get<RobotService>().ListAsync()).Select(r =>

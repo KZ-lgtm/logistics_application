@@ -181,6 +181,9 @@ tbody tr:hover td { background: #1f252c; }
 
 /* ---------------------------------------------------------------- live 3D cell */
 .live { display: flex; flex-direction: column; height: 100vh; }
+/* the 3D cell off its page: kept alive and sized (WebGL needs a size), out of sight and out of the way */
+.live-bg { position: fixed; left: 0; top: 0; width: 1280px; height: 800px; transform: translateX(-300vw); pointer-events: none; }
+.twin-status { display: flex; align-items: center; gap: 7px; margin: 10px 8px 0; padding: 6px 10px; border: 1px solid rgba(53, 194, 107, .45); border-radius: 7px; color: var(--text); text-decoration: none; font-size: 12px; }
 .twin-frame { position: relative; flex: 1 1 auto; min-height: 420px; background: #14181d; }
 .twin-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
 .twin-note { flex: 1 1 420px; }
@@ -192,3 +195,8 @@ tbody tr:hover td { background: #1f252c; }
 .robot-chip select.sm { padding: 1px 4px; font-size: 12px; }
 @media (max-width: 860px) { .live { height: auto; } .twin-frame { height: 70vh; } }
 h1:focus { outline: none; }
+
+fieldset.ops { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset.ops[disabled] { opacity: .55; }
+a.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+a.btn.sm { padding: 2px 8px; font-size: 12px; }

@@ -18,15 +18,43 @@
   /* the engine takes dt = rAF timestamp − previous timestamp, starting from performance.now(): a first timestamp from before that
      gives a negative dt, so hand it monotonic timestamps */
   const raf = window.requestAnimationFrame.bind(window);
-  window.requestAnimationFrame = cb => raf(ts => cb(Math.max(ts, performance.now())));
+  let lastFrame = performance.now();
+  window.requestAnimationFrame = cb => raf(ts => { lastFrame = performance.now(); cb(Math.max(ts, lastFrame)); });
   RC.start({ canvas: $('view'), glbB64: window.ROBOT_GLB_B64, glbs: window.ROBOT_GLBS, ui: UI });
+
+  /* The cell keeps working while the WMS shows another page: nothing is drawn then, and when the browser stops animation frames for
+     the hidden view the simulation is stepped from a timer instead (the WMS keeps getting its events). */
+  let hidden = false;
+  const render = RC.renderer.render.bind(RC.renderer);
+  RC.renderer.render = (scene, camera) => { if (!hidden) render(scene, camera); };
+  /* stepped in slices with a pause in between: the WMS's replies (routing, picks) arrive between slices, as they do between frames */
+  (async () => {
+    let lastTick = performance.now();
+    for (;;) {
+      await new Promise(r => setTimeout(r, 100));
+      const now = performance.now(), dt = Math.min(1, (now - lastTick) / 1000); lastTick = now;
+      if (!RC.sim.running || now - lastFrame < 300) continue;
+      let left = dt * RC.sim.speed;
+      while (left > 1e-6) {
+        const slice = Math.min(0.25, left); left -= slice;
+        const n = Math.max(1, Math.ceil(slice / 0.02)); for (let i = 0; i < n; i++) RC.step(slice / n);
+        if (left > 1e-6) await new Promise(r => setTimeout(r, 0));
+      }
+    }
+  })();
+  window.wmsTwinVisible = v => { hidden = !v; };
+  window.wmsTwinFocus = id => RC.wms.focusOrder(id || null);
+  if (RC.wms.init.focus) window.wmsTwinFocus(RC.wms.init.focus);          // "Watch in 3D" opened the cell
+  const pending = window.frameElement && window.frameElement.pending;     // calls made before this page was ready
+  if (pending) { if ('wmsTwinVisible' in pending) window.wmsTwinVisible(pending.wmsTwinVisible); if ('wmsTwinFocus' in pending) window.wmsTwinFocus(pending.wmsTwinFocus); }
+  $('wms-orders').addEventListener('click', e => { const li = e.target.closest('li[data-order]'); const id = li && parseInt(li.dataset.order, 10); if (id) RC.wms.focusOrder(id === RC.wms.focus ? null : id); });
   loading.remove();
   const o = RC.wms.opts || {};
   $('n-no-read').value = ((o.noReadRate || 0) * 100).toFixed(1).replace(/\.0$/, '');
   if (o.maxLines) $('n-lines-max').value = Math.min(6, o.maxLines);
   if (o.maxQuantity) $('n-qty-max').value = Math.min(5, o.maxQuantity);
   const modeUI = pareto => { $('b-mode-zipf').classList.toggle('on', pareto); $('b-mode-flat').classList.toggle('on', !pareto); };
-  modeUI(o.pareto !== false); $('b-gen').classList.toggle('on', o.generateOrders !== false);
+  modeUI(o.pareto !== false); $('b-gen').classList.toggle('on', !!o.generateOrders);
 
   $('b-run').addEventListener('click', () => { const on = RC.toggleRun(); $('b-run').setAttribute('data-i18n', on ? 'Pause' : 'Run'); $('b-run').textContent = RC.t(on ? 'Pause' : 'Run'); $('b-run').classList.toggle('on', on); });
   $('b-reset').addEventListener('click', async () => {                      // rebuild from the WMS (e.g. after changes made elsewhere)

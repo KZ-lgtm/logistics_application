@@ -1,0 +1,134 @@
+@implements IAsyncDisposable
+@inject TwinService Twin
+@inject TwinBridge Bridge
+@inject WmsClient Wms
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@if (Twin.Started)
+{
+    <div class="live @(visible ? "" : "live-bg")" aria-hidden="@(!visible)">
+        <header class="topbar">
+            <h1 tabindex="-1">Live 3D cell</h1>
+            <span class="small muted twin-note">
+                The 3D cell is the WMS's cell controller. It works the orders on the put wall, the orders you create on the Orders page,
+                as the WMS releases them, and books every pick, scan and sort. It keeps running while you use the other pages.
+            </span>
+            <button class="danger" @onclick="Stop" title="Stop the 3D cell (the WMS keeps its state; the round-based simulator or the console can continue)">Stop 3D cell</button>
+        </header>
+        <div class="robot-bar" aria-label="Robots">
+            @foreach (var r in robots)
+            {
+                <div class="robot-chip @(r.State == RobotState.Fault ? "fault" : !r.Available ? "off" : "")">
+                    <b>@r.Id</b>
+                    <span class="small">@(r.State == RobotState.Fault ? $"fault {r.FaultCode}" : r.Mode != RobotMode.Auto ? r.Mode.ToString() : r.State == RobotState.Working ? "working" : "idle")</span>
+                    @if (r.State == RobotState.Fault)
+                    {
+                        <button class="sm primary" @onclick="() => Clear(r)">Clear</button>
+                    }
+                    else
+                    {
+                        <button class="sm danger" @onclick="() => Fault(r)" title="Inject a fault: watch the WMS work around it">Fault</button>
+                    }
+                    <select class="sm" value="@r.Mode" @onchange="e => Mode(r, e.Value?.ToString())" aria-label="@r.Id mode">
+                        @foreach (var m in Enum.GetValues<RobotMode>()) { <option value="@m">@m</option> }
+                    </select>
+                </div>
+            }
+            <span class="spacer"></span>
+            <a class="btn" href="orders">+ New order</a>
+        </div>
+        <div class="twin-frame">
+            @if (registered)
+            {
+                <iframe id="wms-twin" src="twin/index.html" title="Live 3D cell driven by the WMS" allow="fullscreen"></iframe>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private DotNetObjectReference<TwinBridge>? reference;
+    private bool registered, visible, reloadPending;
+    private IReadOnlyList<RobotDto> robots = [];
+
+    protected override void OnInitialized()
+    {
+        Twin.Changed += OnTwinChanged;
+        Nav.LocationChanged += OnLocationChanged;
+        Wms.Changed += OnWmsChanged;
+        visible = OnLivePage();
+    }
+
+    private bool OnLivePage() => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/') == "live";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Twin.Started && !registered)
+        {
+            reference ??= DotNetObjectReference.Create(Bridge);
+            await JS.InvokeVoidAsync("wms.registerTwin", reference);
+            registered = true;
+            robots = await Wms.QueryAsync(sp => sp.Get<RobotService>().ListAsync());
+            StateHasChanged();
+        }
+    }
+
+    private void OnTwinChanged() => InvokeAsync(async () =>
+    {
+        if (!Twin.Started && registered)
+        {
+            registered = false;
+            try { await JS.InvokeVoidAsync("wms.unregisterTwin"); } catch (JSDisconnectedException) { }
+        }
+        if (Twin.Started && registered) await JS.InvokeVoidAsync("wms.twinFocus", Twin.FocusOrderId);
+        StateHasChanged();
+    });
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(async () =>
+    {
+        visible = OnLivePage();
+        if (registered) await JS.InvokeVoidAsync("wms.twinVisible", visible);
+        StateHasChanged();
+    });
+
+    /// <summary>The robot bar refreshes at most once a second, and only while it is shown.</summary>
+    private void OnWmsChanged()
+    {
+        if (!visible || !Twin.Started || reloadPending) return;
+        reloadPending = true;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Delay(1000);
+            reloadPending = false;
+            robots = await Wms.QueryAsync(sp => sp.Get<RobotService>().ListAsync());
+            StateHasChanged();
+        });
+    }
+
+    private void Stop()
+    {
+        Twin.Stop();
+        Nav.NavigateTo("");
+    }
+
+    private static string FaultCode(RobotDto r) => r.Role switch { RobotRole.ShelfRobot => "50056", RobotRole.Picker => "VAC-01", _ => "E-417" };
+
+    private Task Fault(RobotDto r) => Wms.CommandAsync(sp => sp.Get<RobotService>().ReportFaultAsync(r.Id,
+        new RobotFaultRequest(FaultCode(r), r.Role switch { RobotRole.ShelfRobot => "joint collision", RobotRole.Picker => "vacuum lost", _ => "cup worn" }, "live view")),
+        $"{r.Id}: fault injected. The WMS works around it.");
+
+    private Task Clear(RobotDto r) => Wms.CommandAsync(sp => sp.Get<RobotService>().ClearFaultAsync(r.Id, "live view"), $"{r.Id}: fault cleared.");
+
+    private Task Mode(RobotDto r, string? mode) =>
+        Enum.TryParse<RobotMode>(mode, out var m) ? Wms.CommandAsync(sp => sp.Get<RobotService>().SetModeAsync(r.Id, new SetRobotModeRequest(m, "live view")), $"{r.Id} → {m}.") : Task.CompletedTask;
+
+    public async ValueTask DisposeAsync()
+    {
+        Twin.Changed -= OnTwinChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+        Wms.Changed -= OnWmsChanged;
+        try { await JS.InvokeVoidAsync("wms.unregisterTwin"); } catch (JSDisconnectedException) { }
+        reference?.Dispose();
+    }
+}
