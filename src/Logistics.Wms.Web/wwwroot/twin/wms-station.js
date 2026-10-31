@@ -798,8 +798,8 @@ function loadWmsState() {
 }
 /* label over each put-wall lane: lane, order reference, sorted / ordered cartons (orange: the order in focus) */
 function laneLabel(ln, w) {
-  const txt = w && w.reference ? [ln.id + ' · ' + w.reference, w.sorted + ' / ' + w.items + ' cartons'] : [ln.id, w ? laneWord(w.state) : ''];
-  const focus = !!(w && w.orderId && w.orderId === WMS.focus), key = txt.join('|') + focus;
+  const txt = w && w.reference ? [ln.id + ' · ' + w.reference, RC.t('{s} / {n} cartons', { s: w.sorted, n: w.items })] : [ln.id, w ? laneWord(w.state) : ''];
+  const focus = !!(w && w.orderId && w.orderId === WMS.focus), key = txt.join('|') + focus + RC.lang;
   if (ln.labelKey === key) return; ln.labelKey = key;
   if (!ln.label) {
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 150;
@@ -816,7 +816,7 @@ function laneLabel(ln, w) {
   tex.needsUpdate = true;
 }
 const fit = (g, t, w) => { if (g.measureText(t).width <= w) return t; while (t.length > 3 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
-const laneWord = st => ({ Ready: 'empty case, waiting for an order', Outbound: 'finished case → packing', AtOperator: 'at the packing operator', Inbound: 'empty case coming in' })[st] || st;
+const laneWord = st => RC.t(({ Ready: 'empty case, waiting for an order', Outbound: 'finished case → packing', AtOperator: 'at the packing operator', Inbound: 'empty case coming in' })[st] || st);
 const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 /* the orders panel at the top of the Process panel */
 function renderOrders() {
@@ -826,11 +826,13 @@ function renderOrders() {
     return '<li class="' + (f ? 'focus' : '') + '" data-order="' + (w.orderId || '') + '"><b>' + esc(w.id) + '</b><span class="ref">' + (w.reference ? esc(w.reference) : '<i>' + esc(laneWord(w.state)) + '</i>') + '</span>'
       + (w.reference ? '<span class="num">' + w.sorted + '/' + w.items + '</span><span class="pbar"><i style="width:' + pct + '%"></i></span>' : '') + '</li>'; }).join('');
   const queue = q.length ? q.map(x => '<li class="' + (x.id === WMS.focus ? 'focus' : '') + '" data-order="' + x.id + '"><span class="ref">' + esc(x.reference) + (x.priority ? ' <em>P' + x.priority + '</em>' : '') + '</span><span class="lines">' + esc(x.lines) + '</span></li>').join('')
-    : '<li class="none">No order waiting. Create one on the Orders page' + (WMS.opts && WMS.opts.generateOrders ? '' : ' (or switch on Generate demo orders)') + '.</li>';
-  const html = '<div class="oh"><span>Orders on the put wall</span><span>' + (o.completed || 0) + ' done</span></div><ul class="lanes">' + rows + '</ul>'
-    + '<div class="oh"><span>Queue · ' + (o.queued || 0) + '</span><span>released when a lane has an empty case</span></div><ul class="queue">' + queue + '</ul>';
+    : '<li class="none">' + esc(RC.t(WMS.opts && WMS.opts.generateOrders ? 'No order waiting. Create one on the Orders page.' : 'No order waiting. Create one on the Orders page (or switch on Generate demo orders).')) + '</li>';
+  const html = '<div class="oh"><span>' + esc(RC.t('Orders on the put wall')) + '</span><span>' + esc(RC.t('{n} done', { n: o.completed || 0 })) + '</span></div><ul class="lanes">' + rows + '</ul>'
+    + '<div class="oh"><span>' + esc(RC.t('Queue · {n}', { n: o.queued || 0 })) + '</span><span>' + esc(RC.t('released when a lane has an empty case')) + '</span></div><ul class="queue">' + queue + '</ul>';
   if (el.innerHTML !== html) el.innerHTML = html;
 }
+/* the language switch of the WMS: lane labels and the orders panel follow */
+WMS.relabel = () => { for (const w of WMS.lanes || []) { const ln = LANES.find(l => l.id === w.id); if (ln) laneLabel(ln, w); } renderOrders(); };
 /* point the 3D view at an order: its lane label and its cartons turn orange, the camera goes to the put wall */
 WMS.focusOrder = id => {
   WMS.focus = id || null;
@@ -966,7 +968,7 @@ RC.defineStation({
     out['m-orders'] = wo ? ['WMS: {d} done · {a} active · {q} queued · lead time {l} s', { d: wo.completed, a: wo.active, q: wo.queued, l: wo.leadSeconds ? wo.leadSeconds.toFixed(0) : '—' }] : '—';
     out['m-ordrate'] = wo ? ['{n} orders in the last hour', { n: wo.lastHour }] : '—';
     const rs = Object.values(WMS.robots);
-    out['m-wms'] = rs.length ? rs.map(r => r.id + ' ' + (r.state === 'Fault' ? '⚠ ' + (r.faultCode || 'fault') : r.mode !== 'Auto' ? r.mode.toLowerCase() : r.state === 'Working' ? 'working' : 'idle')).join(' · ') : '—';
+    out['m-wms'] = rs.length ? rs.map(r => r.id + ' ' + (r.state === 'Fault' ? '⚠ ' + (r.faultCode || RC.t('fault')) : r.mode !== 'Auto' ? RC.t(r.mode.toLowerCase()) : RC.t(r.state === 'Working' ? 'working' : 'idle'))).join(' · ') : '—';
     out['m-wmscalls'] = ['{n} calls · {e} refused', { n: WMS.calls, e: WMS.errors.length }];
     out['m-bins'] = ['{p} presented · {i} items / bin · {r} retrieved · {s} stored', { p: s.presented, i: s.presented ? (s.picked / s.presented).toFixed(2) : '—', r: s.retrieved, s: s.stored }];
     const rack = BINS.filter(b => b.where === 'rack').length, freeS = SLOTS.filter(q => !q.bin).length, empty = BINS.filter(b => b.n <= 0).length;
@@ -1127,6 +1129,23 @@ RC.defineStation({
     "{e} to the exception tote ({n} in the tote) · {s} scans": "{e} 件至例外料盒（盒內 {n}）· 掃描 {s} 次",
     "WMS robots": "WMS 機器人",
     "{n} orders in the last hour": "最近一小時 {n} 張訂單",
+    "{s} / {n} cartons": "{s} / {n} 個紙箱",
+    "empty case, waiting for an order": "空訂單箱，等待訂單",
+    "finished case → packing": "完成的訂單箱 → 包裝",
+    "at the packing operator": "在包裝作業員處",
+    "empty case coming in": "空訂單箱送入中",
+    "Orders on the put wall": "放置牆上的訂單",
+    "{n} done": "已完成 {n}",
+    "Queue · {n}": "佇列 · {n}",
+    "released when a lane has an empty case": "通道備妥空訂單箱時釋放",
+    "No order waiting. Create one on the Orders page.": "沒有等待中的訂單。請在訂單頁面建立訂單。",
+    "No order waiting. Create one on the Orders page (or switch on Generate demo orders).": "沒有等待中的訂單。請在訂單頁面建立訂單（或開啟「產生示範訂單」）。",
+    "fault": "故障", "working": "作業中", "idle": "閒置", "manual": "手動", "maintenance": "維護",
+    "Orders & process": "訂單與流程",
+    "Resync with WMS": "與 WMS 重新同步",
+    "Rebuild the cell from the WMS state": "依 WMS 狀態重建工作站",
+    "Generate demo orders": "產生示範訂單",
+    "Demo orders: the WMS keeps 12 generated orders queued. Off: the cell works only the orders people create": "示範訂單：WMS 會保持 12 張產生的訂單排隊。關閉時，工作站只處理人員建立的訂單",
     "Orders, last hour": "訂單（最近一小時）",
     "WMS link": "WMS 連線",
     "R1 · waiting for a task": "R1 · 等待任務",

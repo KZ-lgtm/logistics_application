@@ -8,11 +8,13 @@
     try { bridge = window.parent !== window && window.parent.wmsTwinBridge; } catch (e) { bridge = null; }
     if (!bridge) await new Promise(r => setTimeout(r, 100));
   }
-  if (!bridge) { loading.textContent = 'This view runs inside the WMS: open "Live 3D cell" there.'; return; }
+  const zh = (() => { try { return /^zh/.test(window.parent.document.documentElement.lang) || /^zh/.test(window.parent.wms && window.parent.wms.language ? window.parent.wms.language('logistics-wms/lang') : ''); } catch (e) { return false; } })();
+  loading.textContent = zh ? '正在連線至 WMS…' : 'Connecting to the WMS…';
+  if (!bridge) { loading.textContent = zh ? '此畫面須在 WMS 中開啟：請使用 WMS 的「即時 3D 工作站」。' : 'This view runs inside the WMS: open "Live 3D cell" there.'; return; }
   RC.wms.bridge = bridge;
   const init = async () => { const r = await bridge.invoke('Init', RC.sim.t || 0); if (!r || !r.ok) throw new Error((r && r.error) || 'no answer'); RC.wms.init = r.data; };
   try { await init(); } catch (e) { loading.textContent = 'The WMS could not be read: ' + e.message; return; }
-  loading.textContent = 'Loading robot models…';
+  loading.textContent = zh ? '正在載入機器人模型…' : 'Loading robot models…';
   await new Promise(r => setTimeout(r, 30));                                // let the text paint before the heavy start
 
   /* the engine takes dt = rAF timestamp − previous timestamp, starting from performance.now(): a first timestamp from before that
@@ -77,9 +79,11 @@
   }
   if (UI.controls.electrical && $('b-elec')) $('b-elec').addEventListener('click', () => { const on = RC.setElecVisible ? RC.setElecVisible(!RC.elec.overlay.visible) : false; $('b-elec').classList.toggle('on', on); });
   const langUI = () => { const zh = RC.lang === 'zh'; $('b-zh').classList.toggle('on', zh); $('b-en').classList.toggle('on', !zh); };
-  $('b-en').addEventListener('click', () => { RC.setLang('en'); langUI(); });
-  $('b-zh').addEventListener('click', () => { RC.setLang('zh'); langUI(); });
-  langUI();
+  const setLang = l => { RC.setLang(l); langUI(); RC.wms.relabel(); };
+  $('b-en').addEventListener('click', () => setLang('en'));
+  $('b-zh').addEventListener('click', () => setLang('zh'));
+  window.wmsTwinLang = setLang;                                             // the WMS's language switch
+  setLang(RC.wms.init.language === 'zh' ? 'zh' : 'en');
   // panel collapse / hide (remembered per browser)
   const panels = ['hdr', 'metrics', 'ctrl']; let pst = {};
   try { pst = JSON.parse(localStorage.getItem('wms-twin-panels') || '{}') || {}; } catch (e) { pst = {}; }

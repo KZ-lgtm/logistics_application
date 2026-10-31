@@ -9,7 +9,7 @@ namespace Logistics.Wms.Web.Services;
 /// tracker never grows); commands also run under the cell's <see cref="WmsCommandGate"/>, mark the state for saving and notify the
 /// pages. Business-rule violations become a notification instead of an exception.
 /// </summary>
-public sealed class WmsClient(IServiceScopeFactory scopes, WmsCommandGate gate, Notifications notifications)
+public sealed class WmsClient(IServiceScopeFactory scopes, WmsCommandGate gate, Notifications notifications, Localizer localizer)
 {
     /// <summary>Raised after every successful command.</summary>
     public event Action? Changed;
@@ -40,7 +40,7 @@ public sealed class WmsClient(IServiceScopeFactory scopes, WmsCommandGate gate, 
         }
         catch (WmsException ex)
         {
-            notifications.Error(ex.Message);
+            notifications.Error(localizer.Message(ex.Message));
             return default;
         }
     }

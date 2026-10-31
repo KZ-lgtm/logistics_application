@@ -4,23 +4,23 @@
 <div class="row">
     @if (Sim.TwinActive)
     {
-        <span class="row small muted"><span class="dot ok"></span> The live 3D cell is driving the WMS</span>
+        <span class="row small muted"><span class="dot ok"></span> @L["The live 3D cell is driving the WMS"]</span>
     }
     else
     {
-    <span class="row small muted" title="The built-in cell simulator plays R1, R2 / R3, the arch, S1 / S2 and both operators through the WMS">
+    <span class="row small muted" title="@L["The built-in cell simulator plays R1, R2 / R3, the arch, S1 / S2 and both operators through the WMS"]">
         <span class="dot @(Sim.Running ? "ok" : "muted")"></span>
-        Simulator @(Sim.Running ? "running" : "stopped") · round @Sim.State.Rounds
+        @L.F(Sim.Running ? "Simulator running · round {0}" : "Simulator stopped · round {0}", Sim.State.Rounds)
         @if (Sim.Running && Sim.LastRoundMs > 0) { <span>· @Sim.LastRoundMs.ToString("F0") ms</span> }
     </span>
     @if (Sim.Running)
     {
-        <button @onclick="Sim.Stop">■ Stop</button>
+        <button @onclick="Sim.Stop">■ @L["Stop"]</button>
     }
     else
     {
-        <button class="primary" @onclick="Sim.Start">▶ Run cell</button>
-        <button disabled="@stepping" @onclick="Step">Step ×10</button>
+        <button class="primary" @onclick="Sim.Start">▶ @L["Run cell"]</button>
+        <button disabled="@stepping" @onclick="Step">@L["Step ×10"]</button>
     }
     }
 </div>

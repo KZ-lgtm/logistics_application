@@ -58,6 +58,8 @@ Open the URL it prints and press **Run cell**, or create orders and work through
 * **Cylinder shelf**: top view of all 144 slots coloured by fill, R1's heading, slot details, block/unblock.
 * **Data & storage**: save status, JSON export/import, history compaction, reset.
 
+**Languages:** English and Traditional Chinese (繁體中文, Taiwan terms), switched with **EN / 繁中** in the sidebar. The choice is remembered per browser; the first visit follows the browser's language (zh-TW, zh-HK and zh-Hant pick 繁中). The switch also covers the WMS's business-rule messages and task texts (translated by pattern in `Services/Strings.cs`), the live 3D cell (its engine's own 繁中 mode, kept in step) and the GitHub Pages landing page. To add or change a text, add its English wording and translation to `Strings.ZhHant`; untranslated texts stay English.
+
 State lives in the browser's local storage, separately for each browser. History is compacted automatically once there are more than 600 orders.
 
 ### Server edition

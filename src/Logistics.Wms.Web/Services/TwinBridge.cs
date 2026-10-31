@@ -13,7 +13,7 @@ namespace Logistics.Wms.Web.Services;
 /// sorting targets) and books every event (task done, pick, scan, sort, lane steps, restock, exception tote). Each call carries the
 /// simulation time, so the WMS clock follows the 3D cell, and runs as one WMS command. Replies are { ok, error, data }.
 /// </summary>
-public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState simulation, TwinService twin)
+public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState simulation, TwinService twin, Localizer localizer)
 {
     public sealed record Reply(bool Ok, string? Error, object? Data);
 
@@ -28,7 +28,7 @@ public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState si
     public sealed record TwinOptions(double NoReadRate, int MaxLines, int MaxQuantity, bool Pareto, bool GenerateOrders);
     public sealed record TwinInit(
         IReadOnlyList<TwinSku> Skus, IReadOnlyList<TwinBin> Bins, Dictionary<string, IReadOnlyList<TwinPick>> Stations, IReadOnlyList<TwinLane> Lanes,
-        IReadOnlyList<TwinBeltItem> Belt, int Tote, IReadOnlyList<TwinRobot> Robots, TwinOrders Orders, TwinOptions Options, IReadOnlyList<TwinQueued> Queue, int? Focus);
+        IReadOnlyList<TwinBeltItem> Belt, int Tote, IReadOnlyList<TwinRobot> Robots, TwinOrders Orders, TwinOptions Options, IReadOnlyList<TwinQueued> Queue, int? Focus, string Language);
     public sealed record TwinPoll(IReadOnlyList<TwinLane> Lanes, IReadOnlyList<TwinRobot> Robots, TwinOrders Orders, int Tote, TwinOptions Options, IReadOnlyList<TwinQueued> Queue);
     public sealed record TwinTask(int Id, string Kind, string BinId, string? FromSlot, string? ToSlot);
     public sealed record TwinRoute(string Decision, string? Station);
@@ -62,7 +62,8 @@ public sealed class TwinBridge(WmsClient wms, SimClock clock, SimulationState si
             await OrdersAsync(sp),
             Options(),
             await QueueAsync(sp),
-            twin.FocusOrderId);
+            twin.FocusOrderId,
+            localizer.IsChinese ? "zh" : "en");
     });
 
     /// <summary>Once a second: put-wall lanes, robots, order figures; tops up the order queue when the generator is on.</summary>

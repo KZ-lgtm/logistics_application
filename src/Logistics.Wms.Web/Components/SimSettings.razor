@@ -1,25 +1,25 @@
 @inject SimulationRunner Sim
 <section class="card">
-    <h2>Simulator settings</h2>
+    <h2>@L["Simulator settings"]</h2>
     <div class="row" style="gap: 18px">
-        <label>Speed
+        <label>@L["Speed"]
             <select @bind="Speed">
-                <option value="1000">slow (1 round/s)</option>
-                <option value="400">normal</option>
-                <option value="150">fast</option>
-                <option value="20">as fast as possible</option>
+                <option value="1000">@L["slow (1 round/s)"]</option>
+                <option value="400">@L["normal"]</option>
+                <option value="150">@L["fast"]</option>
+                <option value="20">@L["as fast as possible"]</option>
             </select>
         </label>
-        <label>Demand
+        <label>@L["Demand"]
             <span class="segmented">
-                <button class="@(o.ParetoDemand ? "on" : "")" @onclick="() => o.ParetoDemand = true">Pareto (fast movers)</button>
-                <button class="@(!o.ParetoDemand ? "on" : "")" @onclick="() => o.ParetoDemand = false">Flat</button>
+                <button class="@(o.ParetoDemand ? "on" : "")" @onclick="() => o.ParetoDemand = true">@L["Pareto (fast movers)"]</button>
+                <button class="@(!o.ParetoDemand ? "on" : "")" @onclick="() => o.ParetoDemand = false">@L["Flat"]</button>
             </span>
         </label>
-        <label>No-read rate <input type="number" min="0" max="50" step="0.5" @bind="NoReadPct" /> %</label>
-        <label>Lines per order ≤ <input type="number" min="1" max="8" @bind="o.MaxLinesPerOrder" /></label>
-        <label>Pieces per line ≤ <input type="number" min="1" max="10" @bind="o.MaxQuantityPerLine" /></label>
-        <label><input type="checkbox" @bind="o.GenerateOrders" /> generate orders (keep @o.QueueTarget queued)</label>
+        <label>@L["No-read rate"] <input type="number" min="0" max="50" step="0.5" @bind="NoReadPct" /> %</label>
+        <label>@L["Lines per order ≤"] <input type="number" min="1" max="8" @bind="o.MaxLinesPerOrder" /></label>
+        <label>@L["Pieces per line ≤"] <input type="number" min="1" max="10" @bind="o.MaxQuantityPerLine" /></label>
+        <label><input type="checkbox" @bind="o.GenerateOrders" /> @L.F("generate demo orders (keep {0} queued)", o.QueueTarget)</label>
     </div>
 </section>
 @code {

@@ -20,39 +20,64 @@
   pre { background: #0f1215; border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; }
   section { margin-top: 36px; }
   section h2 { font-size: 13px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+  .lang { float: right; display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .lang button { font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 0; padding: 4px 12px; cursor: pointer; }
+  .lang button + button { border-left: 1px solid var(--line); }
+  .lang button.on { color: var(--text); background: rgba(255,106,19,.16); }
 </style>
 </head>
 <body>
 <main>
-  <h1>Logistics application</h1>
-  <p class="sub">Goods-to-robot order fulfilment: cylinder ASRS (IRB 6700) → 3D-vision picking (2 × IRB 1300) → bar-code sortation onto an 8-lane put wall (2 × IRB 930).</p>
+  <div class="lang" role="group" aria-label="Language / 語言"><button data-lang="en">EN</button><button data-lang="zh-Hant">繁中</button></div>
+  <h1 data-zh="物流應用">Logistics application</h1>
+  <p class="sub" data-zh="貨到機器人訂單履行：圓筒自動倉儲（IRB 6700）→ 3D 視覺揀貨（2 × IRB 1300）→ 條碼分揀至 8 通道放置牆（2 × IRB 930）。">Goods-to-robot order fulfilment: cylinder ASRS (IRB 6700) → 3D-vision picking (2 × IRB 1300) → bar-code sortation onto an 8-lane put wall (2 × IRB 930).</p>
 
   <div class="cards">
     <a class="card" href="wms/">
-      <h2>Open the WMS →</h2>
-      <p>The warehouse management system, running entirely in your browser: orders, rolling waves, dispatch to all five robots, picking, sortation, restock, inventory, and a live 3D view of the cell driven by the WMS. State is kept in this browser.</p>
+      <h2 data-zh="開啟 WMS →">Open the WMS →</h2>
+      <p data-zh="完全在瀏覽器中執行的倉儲管理系統：訂單、滾動波次、五台機器人派工、揀貨、分揀、補貨、庫存，以及由 WMS 驅動的即時 3D 工作站。狀態保存在此瀏覽器中。">The warehouse management system, running entirely in your browser: orders, rolling waves, dispatch to all five robots, picking, sortation, restock, inventory, and a live 3D view of the cell driven by the WMS. State is kept in this browser.</p>
     </a>
     <a class="card" href="simulation/robot_cell.html">
-      <h2>Live 3D simulation →</h2>
-      <p>The robot cell running in your browser (about 10 MB, WebGL).</p>
+      <h2 data-zh="即時 3D 模擬 →">Live 3D simulation →</h2>
+      <p data-zh="在瀏覽器中運轉的機器人工作站（約 10 MB，WebGL）。">The robot cell running in your browser (about 10 MB, WebGL).</p>
     </a>
     <a class="card" href="simulation/RiskAssessment_logistics_application_RevA.xlsx">
-      <h2>Risk assessment ↓</h2>
-      <p>ISO 12100 risk assessment, revision A (Excel).</p>
+      <h2 data-zh="風險評估 ↓">Risk assessment ↓</h2>
+      <p data-zh="ISO 12100 風險評估，修訂版 A（Excel）。">ISO 12100 risk assessment, revision A (Excel).</p>
     </a>
     <a class="card" id="repo" href="https://github.com/KZ-lgtm/logistics_application">
-      <h2>Source code →</h2>
-      <p>C# / .NET 10: the domain model and WMS services, the ASP.NET Core server edition and the Blazor browser edition.</p>
+      <h2 data-zh="原始碼 →">Source code →</h2>
+      <p data-zh="C#／.NET 10：領域模型與 WMS 服務、ASP.NET Core 伺服器版與 Blazor 瀏覽器版。">C# / .NET 10: the domain model and WMS services, the ASP.NET Core server edition and the Blazor browser edition.</p>
     </a>
   </div>
 
   <section>
-    <h2>Two editions, one WMS</h2>
-    <p>The <a href="wms/">browser edition</a> runs the WMS services compiled to WebAssembly, with its database in the browser, for demonstration and training.
+    <h2 data-zh="兩種版本，同一套 WMS">Two editions, one WMS</h2>
+    <p data-zh="<a href=&quot;wms/&quot;>瀏覽器版</a>將 WMS 服務編譯為 WebAssembly 執行，資料庫保存在瀏覽器中，用於展示與訓練。伺服器版是同一套 WMS 的 ASP.NET Core 服務，提供實際工作站使用的 HTTP API，資料庫為 SQLite。使用 .NET 10 SDK 執行：">The <a href="wms/">browser edition</a> runs the WMS services compiled to WebAssembly, with its database in the browser, for demonstration and training.
       The server edition is the same WMS as an ASP.NET Core service with an HTTP API for the real cell, backed by SQLite. To run it with the .NET 10 SDK:</p>
     <pre><code>dotnet run --project src/Logistics.Wms.Api --urls http://localhost:5213</code></pre>
-    <p>Then open <code>http://localhost:5213/</code> and press <b>Start simulation</b>.</p>
+    <p data-zh="接著開啟 <code>http://localhost:5213/</code> 並按下 <b>Start simulation</b>。">Then open <code>http://localhost:5213/</code> and press <b>Start simulation</b>.</p>
   </section>
 </main>
+<script>
+  // EN / 繁中: the same saved choice as the WMS (else the browser's language)
+  (function () {
+    var key = 'logistics-wms/lang', els = document.querySelectorAll('[data-zh]');
+    els.forEach(function (e) { e.dataset.en = e.innerHTML; });
+    function apply(lang) {
+      var zh = lang === 'zh-Hant';
+      els.forEach(function (e) { e.innerHTML = zh ? e.dataset.zh : e.dataset.en; });
+      document.documentElement.lang = zh ? 'zh-Hant-TW' : 'en';
+      document.title = zh ? '物流應用' : 'Logistics Application';
+      document.querySelectorAll('[data-lang]').forEach(function (b) { b.classList.toggle('on', b.dataset.lang === lang); });
+    }
+    var saved = null; try { saved = localStorage.getItem(key); } catch (e) { }
+    var l = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+    apply(saved || (/^zh-(TW|HK|MO|Hant)/i.test(l) ? 'zh-Hant' : 'en'));
+    document.querySelectorAll('[data-lang]').forEach(function (b) {
+      b.addEventListener('click', function () { try { localStorage.setItem(key, b.dataset.lang); } catch (e) { } apply(b.dataset.lang); });
+    });
+  })();
+</script>
 </body>
 </html>

@@ -8,7 +8,9 @@ public static class Fmt
     {
         if (at is null) return "—";
         var s = (now - at.Value).TotalSeconds;
-        return s < 2 ? "now" : s < 60 ? $"{s:F0} s ago" : s < 3600 ? $"{s / 60:F0} min ago" : s < 86400 ? $"{s / 3600:F1} h ago" : at.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+        var L = Services.Localizer.Current;
+        string T(string en, double v) => L is null ? string.Format(en, v) : L.F(en, v);
+        return s < 2 ? (L?["now"] ?? "now") : s < 60 ? T("{0:F0} s ago", s) : s < 3600 ? T("{0:F0} min ago", s / 60) : s < 86400 ? T("{0:F1} h ago", s / 3600) : at.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
     }
 
     public static string Time(DateTime? at) => at is null ? "—" : at.Value.ToLocalTime().ToString("HH:mm:ss");
@@ -28,7 +30,9 @@ public static class Fmt
         return sb.ToString();
     }
 
-    public static string Location(BinLocation l) => l switch
+    public static string Location(BinLocation l) => Services.Localizer.Current?[LocationEnglish(l)] ?? LocationEnglish(l);
+
+    private static string LocationEnglish(BinLocation l) => l switch
     {
         BinLocation.Rack => "Rack",
         BinLocation.PickInbound => "Picking loop · inbound",

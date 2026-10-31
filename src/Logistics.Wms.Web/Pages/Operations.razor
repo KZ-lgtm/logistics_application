@@ -1,98 +1,97 @@
 @page "/operations"
 @inherits WmsPage
 @inject SimulationRunner Sim
-<PageTitle>Cell operations · Logistics WMS</PageTitle>
-<PageHeader Title="Cell operations" />
+<PageTitle>@L["Cell operations · Logistics WMS"]</PageTitle>
+<PageHeader Title="@L["Cell operations"]" />
 
 <div class="content">
     <p class="muted" style="margin: 0">
-        This console plays the cell controller and the operators by hand: every button is one WMS call, the same calls the cell (or the simulator)
-        makes. Work through the flow from left to right: R1 → picking loop → stops → belt &amp; arch → sorters → put wall.
-        @if (Sim.Running) { <span class="warn">The simulator is running and will act on the same items. Stop it to work by hand.</span> }
+        @L["This console plays the cell controller and the operators by hand: every button is one WMS call, the same calls the cell (or the simulator) makes. Work through the flow from left to right: R1 → picking loop → stops → belt & arch → sorters → put wall."]
+        @if (Sim.Running) { <span class="warn">@L["The simulator is running and will act on the same items. Stop it to work by hand."]</span> }
     </p>
     @if (Sim.TwinActive)
     {
-        <div class="banner">The live 3D cell is the cell controller now: it books these events itself, so the buttons here are locked. <a href="live">Go to the 3D cell</a> or stop it there to work by hand.</div>
+        <div class="banner">@L["The live 3D cell is the cell controller now: it books these events itself, so the buttons here are locked."] <a href="live">@L["Go to the 3D cell"]</a> @L["or stop it there to work by hand."]</div>
     }
 
     <fieldset class="ops" disabled="@Sim.TwinActive">
     <div class="grid">
         <!-- R1 -->
         <section class="card span-4 stack">
-            <h2>1 · R1 in the cylinder shelf</h2>
+            <h2>@L["1 · R1 in the cylinder shelf"]</h2>
             @if (task is { } t)
             {
                 <div class="task">
-                    <b>@t.Kind.Words()</b> · bin @t.BinId <span class="muted">(@t.SkuCode, @t.BinQuantity pcs)</span>
-                    <div class="small muted">@t.From → @t.To</div>
+                    <b>@L.Enum(t.Kind)</b> · @L.F("bin {0}", t.BinId) <span class="muted">(@t.SkuCode, @L.F("{0} pcs", t.BinQuantity))</span>
+                    <div class="small muted">@L.Message(t.From) → @L.Message(t.To)</div>
                 </div>
                 <div class="row">
-                    <button class="primary" @onclick="() => CompleteTask(t)">Task done</button>
-                    <button class="danger" @onclick="() => CancelTask(t)">Cancel task</button>
+                    <button class="primary" @onclick="() => CompleteTask(t)">@L["Task done"]</button>
+                    <button class="danger" @onclick="() => CancelTask(t)">@L["Cancel task"]</button>
                 </div>
             }
             else
             {
-                <div class="muted">R1 has no task.</div>
-                <div><button class="primary" @onclick="NextTask">Request next task</button></div>
+                <div class="muted">@L["R1 has no task."]</div>
+                <div><button class="primary" @onclick="NextTask">@L["Request next task"]</button></div>
             }
-            <div class="small muted">Order of work: returning bins, refilled bins, retrievals for open demand, empty bins to restock.</div>
+            <div class="small muted">@L["Order of work: returning bins, refilled bins, retrievals for open demand, empty bins to restock."]</div>
         </section>
 
         <!-- picking loop -->
         <section class="card span-4 stack">
-            <h2>2 · Picking loop</h2>
+            <h2>@L["2 · Picking loop"]</h2>
             @if (inbound.Count == 0)
             {
-                <div class="empty">No bin on the way to a stop.</div>
+                <div class="empty">@L["No bin on the way to a stop."]</div>
             }
             @foreach (var b in inbound)
             {
                 <div class="stop row">
-                    <span><b>@b.Id</b> · @b.SkuCode · @b.Quantity pcs</span>
+                    <span><b>@b.Id</b> · @b.SkuCode · @L.F("{0} pcs", b.Quantity)</span>
                     <span class="spacer"></span>
                     @if (b.Station is null)
                     {
-                        <button @onclick="() => Route(b.Id)">Decision point</button>
+                        <button @onclick="() => Route(b.Id)">@L["Decision point"]</button>
                     }
                     else
                     {
                         <span class="pill s-AtStation">→ @b.Station</span>
-                        <button class="primary" disabled="@(stations.Any(s => s.Station == b.Station && s.BinId is not null))" @onclick="() => Arrive(b.Id, b.Station.Value)">Arrived</button>
+                        <button class="primary" disabled="@(stations.Any(s => s.Station == b.Station && s.BinId is not null))" @onclick="() => Arrive(b.Id, b.Station.Value)">@L["Arrived"]</button>
                     }
                 </div>
             }
-            <div class="small muted">At the decision point the WMS sends the bin to P2, else P1, or back if its SKU is no longer needed.</div>
+            <div class="small muted">@L["At the decision point the WMS sends the bin to P2, else P1, or back if its SKU is no longer needed."]</div>
         </section>
 
         <!-- stops -->
         <section class="card span-4 stack">
-            <h2>3 · Picking stops (R2 / R3)</h2>
+            <h2>@L["3 · Picking stops (R2 / R3)"]</h2>
             @foreach (var st in stations)
             {
                 <div class="stop stack">
                     <div class="row"><b>@st.Station</b>
-                        @if (st.BinId is null) { <span class="muted">no bin</span> }
-                        else { <span>bin @st.BinId · @st.SkuCode · <b>@st.BinQuantity</b> pcs</span> }
+                        @if (st.BinId is null) { <span class="muted">@L["no bin"]</span> }
+                        else { <span>@L.F("bin {0}", st.BinId) · @st.SkuCode · <b>@st.BinQuantity</b> @L["pcs"]</span> }
                     </div>
                     @if (st.BinId is not null)
                     {
                         @foreach (var p in st.Picks.Take(4))
                         {
                             <div class="row small">
-                                <span>#@p.Sequence → order @p.OrderId <span class="muted">(@p.OrderReference)</span></span>
+                                <span>#@p.Sequence → @L.F("order {0}", p.OrderId) <span class="muted">(@p.OrderReference)</span></span>
                                 <span class="spacer"></span>
                                 @if (p == st.Picks[0])
                                 {
-                                    <button class="sm primary" @onclick="() => Do(sp => sp.Get<PickingService>().ConfirmPickAsync(p.PickTaskId), null)">Picked onto belt</button>
+                                    <button class="sm primary" @onclick="() => Do(sp => sp.Get<PickingService>().ConfirmPickAsync(p.PickTaskId), null)">@L["Picked onto belt"]</button>
                                 }
                             </div>
                         }
-                        @if (st.Picks.Count > 4) { <div class="small muted">… @(st.Picks.Count - 4) more</div> }
+                        @if (st.Picks.Count > 4) { <div class="small muted">… @L.F("{0} more", st.Picks.Count - 4)</div> }
                         <div class="row small">
-                            <span class="muted">3D image counts</span>
+                            <span class="muted">@L["3D image counts"]</span>
                             <input type="number" min="0" @bind="counts[st.Station]" />
-                            <button class="sm" @onclick="() => Count(st)">Correct count</button>
+                            <button class="sm" @onclick="() => Count(st)">@L["Correct count"]</button>
                         </div>
                     }
                 </div>
@@ -101,16 +100,16 @@
 
         <!-- belt -->
         <section class="card span-6">
-            <div class="card-head"><h2>4 · Item belt, bar-code arch, sorters (S1 / S2)</h2><span class="muted small">@belt.Count on the belt</span></div>
+            <div class="card-head"><h2>@L["4 · Item belt, bar-code arch, sorters (S1 / S2)"]</h2><span class="muted small">@L.F("{0} on the belt", belt.Count)</span></div>
             @if (belt.Count == 0)
             {
-                <div class="empty">The belt is empty.</div>
+                <div class="empty">@L["The belt is empty."]</div>
             }
             else
             {
                 <div class="table-wrap" style="max-height: 320px">
                     <table>
-                        <thead><tr><th>Carton</th><th>SKU</th><th>Order</th><th>Status</th><th></th></tr></thead>
+                        <thead><tr><th>@L["Carton"]</th><th>@L["SKU"]</th><th>@L["Order"]</th><th>@L["Status"]</th><th></th></tr></thead>
                         <tbody>
                             @foreach (var i in belt)
                             {
@@ -118,18 +117,18 @@
                                     <td>#@i.PickTaskId</td>
                                     <td>@i.SkuCode</td>
                                     <td>@i.OrderId</td>
-                                    <td>@if (i.Status == PickStatus.Routed) { <span class="pill s-Routed">→ @i.TargetSorter · @i.TargetLaneId</span> } else { <span class="pill s-Pending">not scanned</span> }</td>
+                                    <td>@if (i.Status == PickStatus.Routed) { <span class="pill s-Routed">→ @i.TargetSorter · @i.TargetLaneId</span> } else { <span class="pill s-Pending">@L["not scanned"]</span> }</td>
                                     <td class="r">
                                         @if (i.Status == PickStatus.OnBelt)
                                         {
-                                            <button class="sm primary" @onclick="() => Scan(i, i.SkuCode)">Scan</button>
-                                            <button class="sm" @onclick="() => Scan(i, null)" title="The arch could not read the bar code">No read</button>
-                                            <button class="sm" @onclick="() => Scan(i, WrongCode(i.SkuCode))" title="The arch read another SKU's bar code">Wrong code</button>
+                                            <button class="sm primary" @onclick="() => Scan(i, i.SkuCode)">@L["Scan"]</button>
+                                            <button class="sm" @onclick="() => Scan(i, null)" title="@L["The arch could not read the bar code"]">@L["No read"]</button>
+                                            <button class="sm" @onclick="() => Scan(i, WrongCode(i.SkuCode))" title="@L["The arch read another SKU's bar code"]">@L["Wrong code"]</button>
                                         }
                                         else
                                         {
-                                            <button class="sm primary" @onclick="() => Sort(i)">Put into @i.TargetLaneId</button>
-                                            <button class="sm" @onclick="() => Missed(i)" title="The sorter did not take it: it runs off the belt into the exception tote">Missed</button>
+                                            <button class="sm primary" @onclick="() => Sort(i)">@L.F("Put into {0}", i.TargetLaneId)</button>
+                                            <button class="sm" @onclick="() => Missed(i)" title="@L["The sorter did not take it: it runs off the belt into the exception tote"]">@L["Missed"]</button>
                                         }
                                     </td>
                                 </tr>
@@ -142,20 +141,20 @@
 
         <!-- put wall -->
         <section class="card span-6">
-            <h2>5 · Put wall &amp; packing operator</h2>
+            <h2>@L["5 · Put wall & packing operator"]</h2>
             <div class="lanes">
                 @foreach (var l in lanes)
                 {
                     <div class="lane">
-                        <div class="head">@l.Id <StatusPill Value="l.State" Label="@(l.Disabled ? "disabled" : null)" /></div>
-                        <div class="muted small">@(l.OrderId is null ? "no order" : $"order {l.OrderId} · {l.SortedItems}/{l.OrderItems}")</div>
+                        <div class="head">@l.Id <StatusPill Value="l.State" Label="@(l.Disabled ? L["disabled"] : null)" /></div>
+                        <div class="muted small">@(l.OrderId is null ? L["no order"] : L.F("order {0} · {1}/{2}", l.OrderId, l.SortedItems, l.OrderItems))</div>
                         @switch (l.State)
                         {
-                            case LaneState.Outbound: <button class="sm primary" @onclick="() => Lane(l, LaneEvent.CaseAtOperator)">At operator</button> break;
-                            case LaneState.AtOperator: <button class="sm primary" @onclick="() => Lane(l, LaneEvent.CaseReplaced)">Packed, new case</button> break;
-                            case LaneState.Inbound: <button class="sm primary" @onclick="() => Lane(l, LaneEvent.EmptyCaseInPosition)">Case in place</button> break;
+                            case LaneState.Outbound: <button class="sm primary" @onclick="() => Lane(l, LaneEvent.CaseAtOperator)">@L["At operator"]</button> break;
+                            case LaneState.AtOperator: <button class="sm primary" @onclick="() => Lane(l, LaneEvent.CaseReplaced)">@L["Packed, new case"]</button> break;
+                            case LaneState.Inbound: <button class="sm primary" @onclick="() => Lane(l, LaneEvent.EmptyCaseInPosition)">@L["Case in place"]</button> break;
                             default:
-                                <button class="sm ghost" @onclick="() => ToggleLane(l)">@(l.Disabled ? "Enable" : "Disable")</button>
+                                <button class="sm ghost" @onclick="() => ToggleLane(l)">@(l.Disabled ? L["Enable"] : L["Disable"])</button>
                                 break;
                         }
                     </div>
@@ -165,25 +164,25 @@
 
         <!-- restock -->
         <section class="card span-6 stack">
-            <h2>6 · Restock operator (west port)</h2>
+            <h2>@L["6 · Restock operator (west port)"]</h2>
             @if (restock.Count == 0)
             {
-                <div class="empty">No bin at the restock station. R1 sends empty bins here.</div>
+                <div class="empty">@L["No bin at the restock station. R1 sends empty bins here."]</div>
             }
             @foreach (var r in restock)
             {
                 var f = Refill(r.BinId, r);
                 <div class="stop row">
-                    <span><b>@r.BinId</b> · @r.SkuCode · @r.Quantity / @r.Capacity pcs @if (r.BufferAvailable > 0) { <span class="pill s-Open">@r.BufferAvailable from exceptions</span> }</span>
+                    <span><b>@r.BinId</b> · @r.SkuCode · @r.Quantity / @L.F("{0} pcs", r.Capacity) @if (r.BufferAvailable > 0) { <span class="pill s-Open">@L.F("{0} from exceptions", r.BufferAvailable)</span> }</span>
                     <span class="spacer"></span>
-                    <label class="small">fill to <input type="number" min="0" @bind="f.Quantity" /></label>
+                    <label class="small">@L["fill to"] <input type="number" min="0" @bind="f.Quantity" /></label>
                     @if (r.Quantity == 0)
                     {
-                        <select class="small" @bind="f.Sku" title="An empty bin can take another SKU">
+                        <select class="small" @bind="f.Sku" title="@L["An empty bin can take another SKU"]">
                             @foreach (var s in skus) { <option value="@s.Code">@s.Code</option> }
                         </select>
                     }
-                    <button class="sm primary" @onclick="() => DoRestock(r, f)">Done</button>
+                    <button class="sm primary" @onclick="() => DoRestock(r, f)">@L["Done"]</button>
                 </div>
             }
         </section>
@@ -191,27 +190,27 @@
         <!-- exceptions -->
         <section class="card span-6 stack">
             <div class="card-head">
-                <h2>7 · Exception tote</h2>
-                <button class="sm" @onclick="EmptyTote">Tote emptied</button>
+                <h2>@L["7 · Exception tote"]</h2>
+                <button class="sm" @onclick="EmptyTote">@L["Tote emptied"]</button>
             </div>
             @if (exceptions.Count == 0)
             {
-                <div class="empty">No open exceptions.</div>
+                <div class="empty">@L["No open exceptions."]</div>
             }
             else
             {
                 <div class="table-wrap" style="max-height: 260px">
                     <table>
-                        <thead><tr><th>#</th><th>SKU</th><th>Order</th><th>Reason</th><th></th></tr></thead>
+                        <thead><tr><th>#</th><th>@L["SKU"]</th><th>@L["Order"]</th><th>@L["Reason"]</th><th></th></tr></thead>
                         <tbody>
                             @foreach (var e in exceptions)
                             {
                                 <tr>
                                     <td>@e.Id</td><td>@e.SkuCode</td><td>@e.OrderId</td>
-                                    <td>@e.Reason.Words() @if (e.ReadBarcode is not null) { <span class="muted">(read @e.ReadBarcode)</span> }</td>
+                                    <td>@L.Enum(e.Reason) @if (e.ReadBarcode is not null) { <span class="muted">(@L.F("read {0}", e.ReadBarcode))</span> }</td>
                                     <td class="r">
-                                        <button class="sm" @onclick="() => Resolve(e, ExceptionDisposition.ReturnedToStock)">Return to stock</button>
-                                        <button class="sm danger" @onclick="() => Resolve(e, ExceptionDisposition.Scrapped)">Scrap</button>
+                                        <button class="sm" @onclick="() => Resolve(e, ExceptionDisposition.ReturnedToStock)">@L["Return to stock"]</button>
+                                        <button class="sm danger" @onclick="() => Resolve(e, ExceptionDisposition.Scrapped)">@L["Scrap"]</button>
                                     </td>
                                 </tr>
                             }
@@ -269,7 +268,7 @@
     private async Task NextTask()
     {
         var t = await Wms.CommandAsync(sp => sp.Get<AsrsService>().RequestNextTaskAsync());
-        if (t is null) Notifications.Info("R1 has nothing to do: no returning bin, no open demand, no empty bin to restock.");
+        if (t is null) Notifications.Info(L["R1 has nothing to do: no returning bin, no open demand, no empty bin to restock."]);
         await LoadAsync();
     }
 
@@ -279,9 +278,9 @@
         if (r is not null)
             Notifications.Info(r.Decision switch
             {
-                RouteDecision.Station => $"Bin {binId} → stop {r.Station} ({r.OpenDemand} pcs open demand).",
-                RouteDecision.Return => $"Bin {binId} is not needed any more and goes back to the return head.",
-                _ => $"Both stops are busy: bin {binId} waits at the decision point.",
+                RouteDecision.Station => L.F("Bin {0} → stop {1} ({2} pcs open demand).", binId, r.Station, r.OpenDemand),
+                RouteDecision.Return => L.F("Bin {0} is not needed any more and goes back to the return head.", binId),
+                _ => L.F("Both stops are busy: bin {0} waits at the decision point.", binId),
             });
         await LoadAsync();
     }
@@ -290,20 +289,20 @@
     {
         var st = await Wms.CommandAsync(sp => sp.Get<PickingService>().ArriveAtStationAsync(binId, station));
         if (st is not null)
-            Notifications.Info(st.BinId is null ? $"Bin {binId} has nothing to pick any more and was released." : $"Bin {binId} at {station}: {st.Picks.Count} picks allocated.");
+            Notifications.Info(st.BinId is null ? L.F("Bin {0} has nothing to pick any more and was released.", binId) : L.F("Bin {0} at {1}: {2} picks allocated.", binId, station, st.Picks.Count));
         await LoadAsync();
     }
 
     private Task Count(StationDto st) =>
-        Do(sp => sp.Get<PickingService>().ReportBinCountAsync(st.BinId!, new BinCountRequest(counts[st.Station], "console")), $"Bin {st.BinId} corrected to {counts[st.Station]} pcs.");
+        Do(sp => sp.Get<PickingService>().ReportBinCountAsync(st.BinId!, new BinCountRequest(counts[st.Station], "console")), L.F("Bin {0} corrected to {1} pcs.", st.BinId, counts[st.Station]));
 
     private async Task Scan(BeltItemDto i, string? barcode)
     {
         var r = await Wms.CommandAsync(sp => sp.Get<SortationService>().ScanAsync(new ScanRequest(i.PickTaskId, barcode)));
         if (r is not null)
         {
-            if (r.Target == ScanTarget.Exception) Notifications.Error($"Carton #{i.PickTaskId} → exception tote ({r.ExceptionReason?.Words()}); the order line is fetched again.");
-            else Notifications.Info($"Carton #{i.PickTaskId} → {r.Target}, lane {r.LaneId}.");
+            if (r.Target == ScanTarget.Exception) Notifications.Error(L.F("Carton #{0} → exception tote ({1}); the order line is fetched again.", i.PickTaskId, r.ExceptionReason is { } why ? L.Enum(why) : ""));
+            else Notifications.Info(L.F("Carton #{0} → {1}, lane {2}.", i.PickTaskId, r.Target, r.LaneId));
         }
         await LoadAsync();
     }
@@ -313,21 +312,21 @@
     private async Task Sort(BeltItemDto i)
     {
         var r = await Wms.CommandAsync(sp => sp.Get<SortationService>().ConfirmSortAsync(new SortConfirmRequest(i.PickTaskId, i.TargetLaneId!)));
-        if (r?.OrderCompleted == true) Notifications.Info($"Order {r.OrderId} is complete: the case in lane {r.LaneId} runs out to the packing operator.");
+        if (r?.OrderCompleted == true) Notifications.Info(L.F("Order {0} is complete: the case in lane {1} runs out to the packing operator.", r.OrderId, r.LaneId));
         await LoadAsync();
     }
 
-    private Task CompleteTask(AsrsTaskDto t) => Do(sp => sp.Get<AsrsService>().CompleteTaskAsync(t.Id), $"R1: {t.Kind.Words()} of bin {t.BinId} done.");
+    private Task CompleteTask(AsrsTaskDto t) => Do(sp => sp.Get<AsrsService>().CompleteTaskAsync(t.Id), L.F("R1: {0} of bin {1} done.", L.Enum(t.Kind), t.BinId));
 
-    private Task CancelTask(AsrsTaskDto t) => Do(sp => sp.Get<AsrsService>().CancelTaskAsync(t.Id), $"R1 task {t.Id} cancelled.");
+    private Task CancelTask(AsrsTaskDto t) => Do(sp => sp.Get<AsrsService>().CancelTaskAsync(t.Id), L.F("R1 task {0} cancelled.", t.Id));
 
     private Task Missed(BeltItemDto i) =>
-        Do(sp => sp.Get<SortationService>().ReportMissedAsync(i.PickTaskId), $"Carton #{i.PickTaskId} ran off the belt into the exception tote.");
+        Do(sp => sp.Get<SortationService>().ReportMissedAsync(i.PickTaskId), L.F("Carton #{0} ran off the belt into the exception tote.", i.PickTaskId));
 
     private Task ToggleLane(LaneDto l) =>
-        Do(sp => sp.Get<PutWallService>().SetEnabledAsync(l.Id, l.Disabled), l.Disabled ? $"Lane {l.Id} enabled." : $"Lane {l.Id} takes no new orders.");
+        Do(sp => sp.Get<PutWallService>().SetEnabledAsync(l.Id, l.Disabled), l.Disabled ? L.F("Lane {0} enabled.", l.Id) : L.F("Lane {0} takes no new orders.", l.Id));
 
-    private Task EmptyTote() => Do(sp => sp.Get<ExceptionService>().EmptyToteAsync(), "Exception tote emptied.");
+    private Task EmptyTote() => Do(sp => sp.Get<ExceptionService>().EmptyToteAsync(), L["Exception tote emptied."]);
 
     private Task Lane(LaneDto l, LaneEvent e) => Do(sp => sp.Get<PutWallService>().AdvanceAsync(l.Id, e), null);
 
@@ -343,13 +342,13 @@
         if (bin is not null)
         {
             refills.Remove(r.BinId);
-            Notifications.Info($"Bin {bin.Id} refilled to {bin.Quantity} × {bin.SkuCode}; it waits for R1 at the restock-loop return head.");
+            Notifications.Info(L.F("Bin {0} refilled to {1} × {2}; it waits for R1 at the restock-loop return head.", bin.Id, bin.Quantity, bin.SkuCode));
         }
         await LoadAsync();
     }
 
     private Task Resolve(ExceptionItemDto e, ExceptionDisposition d) =>
-        Do(sp => sp.Get<ExceptionService>().ResolveAsync(e.Id, new ResolveExceptionRequest(d, "console")), $"Exception {e.Id}: {d.Words()}.");
+        Do(sp => sp.Get<ExceptionService>().ResolveAsync(e.Id, new ResolveExceptionRequest(d, "console")), L.F("Exception {0}: {1}.", e.Id, L.Enum(d)));
 
     [Inject] private Notifications Notifications { get; set; } = null!;
 }

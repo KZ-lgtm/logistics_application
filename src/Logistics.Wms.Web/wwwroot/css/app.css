@@ -200,3 +200,7 @@ fieldset.ops { border: 0; padding: 0; margin: 0; min-width: 0; }
 fieldset.ops[disabled] { opacity: .55; }
 a.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 a.btn.sm { padding: 2px 8px; font-size: 12px; }
+.page { display: contents; }
+.side .lang { margin: 12px 8px 0; align-self: flex-start; }
+.side .lang button { padding: 3px 12px; }
+@media (max-width: 860px) { .side .lang { margin: 0 0 0 auto; } }

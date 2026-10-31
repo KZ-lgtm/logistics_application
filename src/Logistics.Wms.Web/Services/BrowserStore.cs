@@ -30,7 +30,7 @@ public sealed class BrowserStore(IServiceProvider services, IServiceScopeFactory
     {
         string? json = null;
         try { json = await js.InvokeAsync<string?>("localStorage.getItem", Key); }
-        catch (JSException) { Warning = "Local storage is not available; changes are lost when the page closes."; }
+        catch (JSException) { Warning = Localizer.Current?["Local storage is not available; changes are lost when the page closes."] ?? "Local storage is not available; changes are lost when the page closes."; }
 
         if (json is not null)
         {
@@ -43,7 +43,8 @@ public sealed class BrowserStore(IServiceProvider services, IServiceScopeFactory
             }
             catch (Exception ex)
             {
-                notifications.Error($"The saved state could not be read ({ex.Message}); starting with a new cell.");
+                notifications.Error((Localizer.Current?.F("The saved state could not be read ({0}); starting with a new cell.", ex.Message))
+                    ?? $"The saved state could not be read ({ex.Message}); starting with a new cell.");
             }
         }
         await ResetAsync(save: false);
@@ -119,7 +120,8 @@ public sealed class BrowserStore(IServiceProvider services, IServiceScopeFactory
         }
         catch (JSException ex)
         {
-            Warning = $"Saving to local storage failed ({ex.Message.Split('\n')[0]}). Export a backup or compact the history.";
+            Warning = Localizer.Current?.F("Saving to local storage failed ({0}). Export a backup or compact the history.", ex.Message.Split('\n')[0])
+                ?? $"Saving to local storage failed ({ex.Message.Split('\n')[0]}). Export a backup or compact the history.";
         }
         LastSaved = clock.GetUtcNow().UtcDateTime;
         LastSize = json.Length;

@@ -1,13 +1,13 @@
 @page "/"
 @inherits WmsPage
 @inject SimulationRunner Sim
-<PageTitle>Dashboard · Logistics WMS</PageTitle>
-<PageHeader Title="Dashboard" />
+<PageTitle>@L["Dashboard · Logistics WMS"]</PageTitle>
+<PageHeader Title="@L["Dashboard"]" />
 
 <div class="content">
     @if (d is null)
     {
-        <div class="empty">Loading…</div>
+        <div class="empty">@L["Loading…"]</div>
     }
     else
     {
@@ -16,112 +16,112 @@
         {
             <div class="card row">
                 <div class="spacer">
-                    <h3>The cell is empty</h3>
-                    <span class="muted">Create orders on the Orders page; the cell works them as the WMS releases them to the put wall. Watch it in the <a href="live">live 3D cell</a>, run the quick simulator (<b>Run cell</b>), or drive the cell step by step under <a href="operations">Cell operations</a>. Demo orders can be switched on in the simulator settings below.</span>
+                    <h3>@L["The cell is empty"]</h3>
+                    <span class="muted">@L["Create orders on the Orders page; the cell works them as the WMS releases them to the put wall."] <a href="live">@L["Watch them in the live 3D cell"]</a>, @L["run the quick simulator (Run cell), or drive the cell step by step under"] <a href="operations">@L["Cell operations"]</a>. @L["Demo orders can be switched on in the simulator settings below."]</span>
                 </div>
-                <a class="btn primary" href="orders">Create an order</a>
-                <a class="btn" href="live">Open the 3D cell</a>
+                <a class="btn primary" href="orders">@L["Create an order"]</a>
+                <a class="btn" href="live">@L["Open the 3D cell"]</a>
             </div>
         }
         <section class="card">
-            <h2>Key figures</h2>
+            <h2>@L["Key figures"]</h2>
             <div class="kpis">
-                <Kpi Label="orders completed in the last hour" Value="@t.OrdersLastHour.ToString()" />
-                <Kpi Label="items sorted in the last hour" Value="@t.ItemsSortedLastHour.ToString()" />
-                <Kpi Label="queued / active orders" Value="@($"{o.Queued} / {o.Active}")" />
-                <Kpi Label="orders completed (lifetime)" Value="@o.Completed.ToString()" />
-                <Kpi Label="avg. lead time on the put wall" Value="@(o.AverageLeadTimeSeconds is double lead ? $"{lead:F0} s" : "—")" Hint="From release to a lane until the last carton is in the case (last hour)" />
-                <Kpi Label="items per bin presentation" Value="@t.ItemsPerPresentation.ToString("F2")" Hint="Cartons picked per bin brought to a picking stop" />
-                <Kpi Label="bar-code no-read rate" Value="@($"{t.NoReadRate * 100:F2} %")" Class="@(t.NoReadRate > 0.02 ? "warn" : null)" />
-                <Kpi Label="cartons in stock" Value="@s.ItemsInStock.ToString()" />
+                <Kpi Label="@L["orders completed in the last hour"]" Value="@t.OrdersLastHour.ToString()" />
+                <Kpi Label="@L["items sorted in the last hour"]" Value="@t.ItemsSortedLastHour.ToString()" />
+                <Kpi Label="@L["queued / active orders"]" Value="@($"{o.Queued} / {o.Active}")" />
+                <Kpi Label="@L["orders completed (lifetime)"]" Value="@o.Completed.ToString()" />
+                <Kpi Label="@L["avg. lead time on the put wall"]" Value="@(o.AverageLeadTimeSeconds is double lead ? $"{lead:F0} s" : "—")" Hint="@L["From release to a lane until the last carton is in the case (last hour)"]" />
+                <Kpi Label="@L["items per bin presentation"]" Value="@t.ItemsPerPresentation.ToString("F2")" Hint="@L["Cartons picked per bin brought to a picking stop"]" />
+                <Kpi Label="@L["bar-code no-read rate"]" Value="@($"{t.NoReadRate * 100:F2} %")" Class="@(t.NoReadRate > 0.02 ? "warn" : null)" />
+                <Kpi Label="@L["cartons in stock"]" Value="@s.ItemsInStock.ToString()" />
             </div>
         </section>
 
         <div class="grid">
             <section class="card span-8">
-                <div class="card-head"><h2>Put wall · one order per lane</h2><a class="small" href="operations">operate →</a></div>
+                <div class="card-head"><h2>@L["Put wall · one order per lane"]</h2><a class="small" href="operations">@L["operate →"]</a></div>
                 <div class="lanes">
                     @foreach (var l in d.Lanes)
                     {
                         <div class="lane">
-                            <div class="head">@l.Id <StatusPill Value="l.State" Label="@(l.Disabled ? "disabled" : null)" /></div>
-                            <div class="muted small">@(l.OrderId is null ? "no order" : $"order {l.OrderId} · {l.SortedItems}/{l.OrderItems} items")</div>
+                            <div class="head">@l.Id <StatusPill Value="l.State" Label="@(l.Disabled ? L["disabled"] : null)" /></div>
+                            <div class="muted small">@(l.OrderId is null ? L["no order"] : L.F("order {0} · {1}/{2} items", l.OrderId, l.SortedItems, l.OrderItems))</div>
                             <div class="bar"><i style="width:@(l.OrderItems == 0 ? 0 : 100 * l.SortedItems / l.OrderItems)%"></i></div>
-                            <div class="muted small">@l.CasesCompleted @(l.CasesCompleted == 1 ? "case" : "cases") done</div>
+                            <div class="muted small">@L.F(l.CasesCompleted == 1 ? "{0} case done" : "{0} cases done", l.CasesCompleted)</div>
                         </div>
                     }
                 </div>
             </section>
 
             <section class="card span-4">
-                <div class="card-head"><h2>Robots</h2><a class="small" href="robots">details →</a></div>
+                <div class="card-head"><h2>@L["Robots"]</h2><a class="small" href="robots">@L["details →"]</a></div>
                 @foreach (var r in d.Robots)
                 {
                     <div class="robot-row">
                         <b>@r.Id</b>
                         <div style="min-width: 0">
                             <div class="small" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
-                                @if (r.State == RobotState.Fault) { <span class="bad">fault @r.FaultCode</span> }
-                                else if (r.Mode != RobotMode.Auto) { <span class="warn">@r.Mode</span> }
-                                else if (r.TaskText is not null) { @r.TaskText }
-                                else { <span class="muted">idle</span> }
+                                @if (r.State == RobotState.Fault) { <span class="bad">@L.F("fault {0}", r.FaultCode)</span> }
+                                else if (r.Mode != RobotMode.Auto) { <span class="warn">@L.Enum(r.Mode)</span> }
+                                else if (r.TaskText is not null) { @L.Message(r.TaskText) }
+                                else { <span class="muted">@L["idle"]</span> }
                             </div>
-                            <div class="small muted">@r.Assignment</div>
+                            <div class="small muted">@L.Message(r.Assignment)</div>
                         </div>
-                        <div class="util" title="utilisation">
+                        <div class="util" title="@L["utilisation"]">
                             <div class="small r num">@((r.Utilization * 100).ToString("F0")) %</div>
                             <div class="bar accent"><i style="width:@((r.Utilization * 100).ToString("F0"))%"></i></div>
                         </div>
                     </div>
                 }
-                <h2 style="margin-top: 12px">Picking stops</h2>
+                <h2 style="margin-top: 12px">@L["Picking stops"]</h2>
                 @foreach (var st in d.Stations)
                 {
                     <div class="stop row" style="margin-bottom: 6px">
                         <b>@st.Station</b>
-                        @if (st.BinId is null) { <span class="muted">empty</span> }
-                        else { <span>bin @st.BinId · @st.SkuCode · @st.BinQuantity pcs</span><span class="spacer"></span><span class="pill s-Pending">@st.Picks.Count picks</span> }
+                        @if (st.BinId is null) { <span class="muted">@L["empty"]</span> }
+                        else { <span>@L.F("bin {0} · {1} · {2} pcs", st.BinId, st.SkuCode, st.BinQuantity)</span><span class="spacer"></span><span class="pill s-Pending">@L.F("{0} picks", st.Picks.Count)</span> }
                     </div>
                 }
             </section>
 
             <section class="card span-4">
-                <h2>Storage</h2>
+                <h2>@L["Storage"]</h2>
                 <table>
                     <tbody>
-                        <tr><td>Bins in the shelf</td><td class="r">@s.BinsInRack</td></tr>
-                        <tr><td>Free slots</td><td class="r">@s.FreeSlots of @s.Slots</td></tr>
-                        <tr><td>Empty bins waiting for restock</td><td class="r">@s.EmptyBinsInRack</td></tr>
-                        <tr><td>Bins on the picking loop</td><td class="r">@s.BinsOnPickLoop / @CellLayout.PickLoopCapacity</td></tr>
-                        <tr><td>Bins on the restock loop</td><td class="r">@s.BinsOnRestockLoop / @CellLayout.RestockLoopCapacity</td></tr>
+                        <tr><td>@L["Bins in the shelf"]</td><td class="r">@s.BinsInRack</td></tr>
+                        <tr><td>@L["Free slots"]</td><td class="r">@L.F("{0} of {1}", s.FreeSlots, s.Slots)</td></tr>
+                        <tr><td>@L["Empty bins waiting for restock"]</td><td class="r">@s.EmptyBinsInRack</td></tr>
+                        <tr><td>@L["Bins on the picking loop"]</td><td class="r">@s.BinsOnPickLoop / @CellLayout.PickLoopCapacity</td></tr>
+                        <tr><td>@L["Bins on the restock loop"]</td><td class="r">@s.BinsOnRestockLoop / @CellLayout.RestockLoopCapacity</td></tr>
                     </tbody>
                 </table>
             </section>
 
             <section class="card span-4">
-                <h2>Belt &amp; exceptions</h2>
+                <h2>@L["Belt & exceptions"]</h2>
                 <table>
                     <tbody>
-                        <tr><td>Cartons on the belt</td><td class="r">@t.ItemsOnBelt</td></tr>
-                        <tr><td>Picked / sorted (lifetime)</td><td class="r">@t.ItemsPickedTotal / @t.ItemsSortedTotal</td></tr>
-                        <tr><td>Scans / no-reads</td><td class="r">@t.Scans / @t.NoReads</td></tr>
-                        <tr><td>Exception tote</td><td class="r @(d.Exceptions.ToteFull ? "bad" : "")">@d.Exceptions.ToteCount / @d.Exceptions.ToteCapacity</td></tr>
-                        <tr><td>Open exceptions</td><td class="r @(d.Exceptions.Open > 0 ? "warn" : "")">@d.Exceptions.Open</td></tr>
+                        <tr><td>@L["Cartons on the belt"]</td><td class="r">@t.ItemsOnBelt</td></tr>
+                        <tr><td>@L["Picked / sorted (lifetime)"]</td><td class="r">@t.ItemsPickedTotal / @t.ItemsSortedTotal</td></tr>
+                        <tr><td>@L["Scans / no-reads"]</td><td class="r">@t.Scans / @t.NoReads</td></tr>
+                        <tr><td>@L["Exception tote"]</td><td class="r @(d.Exceptions.ToteFull ? "bad" : "")">@d.Exceptions.ToteCount / @d.Exceptions.ToteCapacity</td></tr>
+                        <tr><td>@L["Open exceptions"]</td><td class="r @(d.Exceptions.Open > 0 ? "warn" : "")">@d.Exceptions.Open</td></tr>
                     </tbody>
                 </table>
             </section>
 
             <section class="card span-4">
-                <div class="card-head"><h2>At or below reorder point</h2><a class="small" href="inventory">inventory →</a></div>
+                <div class="card-head"><h2>@L["At or below reorder point"]</h2><a class="small" href="inventory">@L["inventory →"]</a></div>
                 @if (d.LowStock.Count == 0)
                 {
-                    <div class="empty">All SKUs above their reorder point.</div>
+                    <div class="empty">@L["All SKUs above their reorder point."]</div>
                 }
                 else
                 {
                     <div class="table-wrap" style="max-height: 190px">
                         <table>
-                            <thead><tr><th>SKU</th><th class="r">Stock</th><th class="r">Reorder</th><th class="r">Demand</th></tr></thead>
+                            <thead><tr><th>@L["SKU"]</th><th class="r">@L["Stock"]</th><th class="r">@L["Reorder"]</th><th class="r">@L["Demand"]</th></tr></thead>
                             <tbody>
                                 @foreach (var k in d.LowStock)
                                 {

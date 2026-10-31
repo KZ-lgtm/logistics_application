@@ -5,24 +5,28 @@
 @inject TwinService Twin
 <div class="shell">
     <aside class="side">
-        <div class="brand"><i></i><div>Logistics WMS<span>browser edition</span></div></div>
-        <nav class="nav" aria-label="Main">
-            <NavLink title="Dashboard" aria-label="Dashboard" href="" Match="NavLinkMatch.All"><Icon Name="dash" /><span>Dashboard</span></NavLink>
-            <NavLink title="Orders" aria-label="Orders" href="orders"><Icon Name="orders" /><span>Orders</span></NavLink>
-            <NavLink title="Robots" aria-label="Robots" href="robots"><Icon Name="robot" /><span>Robots</span></NavLink>
-            <NavLink title="Live 3D cell" aria-label="Live 3D cell" href="live"><Icon Name="cube" /><span>Live 3D cell</span></NavLink>
-            <NavLink title="Cell operations" aria-label="Cell operations" href="operations"><Icon Name="ops" /><span>Cell operations</span></NavLink>
-            <NavLink title="Inventory" aria-label="Inventory" href="inventory"><Icon Name="stock" /><span>Inventory</span></NavLink>
-            <NavLink title="Cylinder shelf" aria-label="Cylinder shelf" href="shelf"><Icon Name="shelf" /><span>Cylinder shelf</span></NavLink>
-            <NavLink title="Data &amp; storage" aria-label="Data &amp; storage" href="data"><Icon Name="data" /><span>Data &amp; storage</span></NavLink>
+        <div class="brand"><i></i><div>@L["Logistics WMS"]<span>@L["browser edition"]</span></div></div>
+        <nav class="nav" aria-label="@L["Main"]">
+            <NavLink title="@L["Dashboard"]" aria-label="@L["Dashboard"]" href="" Match="NavLinkMatch.All"><Icon Name="dash" /><span>@L["Dashboard"]</span></NavLink>
+            <NavLink title="@L["Orders"]" aria-label="@L["Orders"]" href="orders"><Icon Name="orders" /><span>@L["Orders"]</span></NavLink>
+            <NavLink title="@L["Robots"]" aria-label="@L["Robots"]" href="robots"><Icon Name="robot" /><span>@L["Robots"]</span></NavLink>
+            <NavLink title="@L["Live 3D cell"]" aria-label="@L["Live 3D cell"]" href="live"><Icon Name="cube" /><span>@L["Live 3D cell"]</span></NavLink>
+            <NavLink title="@L["Cell operations"]" aria-label="@L["Cell operations"]" href="operations"><Icon Name="ops" /><span>@L["Cell operations"]</span></NavLink>
+            <NavLink title="@L["Inventory"]" aria-label="@L["Inventory"]" href="inventory"><Icon Name="stock" /><span>@L["Inventory"]</span></NavLink>
+            <NavLink title="@L["Cylinder shelf"]" aria-label="@L["Cylinder shelf"]" href="shelf"><Icon Name="shelf" /><span>@L["Cylinder shelf"]</span></NavLink>
+            <NavLink title="@L["Data & storage"]" aria-label="@L["Data & storage"]" href="data"><Icon Name="data" /><span>@L["Data & storage"]</span></NavLink>
         </nav>
         @if (Twin.Started)
         {
-            <a class="twin-status" href="live" title="The 3D cell keeps working the orders while you use the other pages"><span class="dot ok"></span> 3D cell running</a>
+            <a class="twin-status" href="live" title="@L["The 3D cell keeps working the orders while you use the other pages"]"><span class="dot ok"></span> @L["3D cell running"]</a>
         }
+        <div class="lang segmented" role="group" aria-label="Language / 語言">
+            <button class="@(L.IsChinese ? "" : "on")" lang="en" @onclick="() => L.SetAsync(Localizer.English)">EN</button>
+            <button class="@(L.IsChinese ? "on" : "")" lang="zh-Hant" @onclick="() => L.SetAsync(Localizer.Chinese)">繁中</button>
+        </div>
         <div class="side-foot">
-            <span>@(Store.LastSaved is null ? (Store.Restored ? "Restored from this browser" : "New cell, not saved yet") : $"Saved {Fmt.Time(Store.LastSaved)} · {Fmt.Bytes(Store.LastSize)}")</span>
-            <span>Runs in your browser · <a href="../">project home</a></span>
+            <span>@(Store.LastSaved is null ? (Store.Restored ? L["Restored from this browser"] : L["New cell, not saved yet"]) : L.F("Saved {0} · {1}", Fmt.Time(Store.LastSaved), Fmt.Bytes(Store.LastSize)))</span>
+            <span>@L["Runs in your browser"] · <a href="../">@L["project home"]</a></span>
         </div>
     </aside>
     <div class="main">
@@ -30,7 +34,8 @@
         {
             <div class="content" style="padding-bottom: 0"><div class="banner">@Store.Warning</div></div>
         }
-        @Body
+        @* keyed by the language: switching rebuilds the page in the new language (the 3D cell below keeps running) *@
+        <div class="page" @key="L.Language">@Body</div>
         <TwinHost />
     </div>
 </div>
@@ -41,6 +46,7 @@
     {
         Wms.Changed += Refresh;
         Twin.Changed += Refresh;
+        L.Changed += Refresh;
         timer = new Timer(_ => Refresh(), null, 3500, 3500);
     }
     private void Refresh() => InvokeAsync(StateHasChanged);
@@ -48,6 +54,7 @@
     {
         Wms.Changed -= Refresh;
         Twin.Changed -= Refresh;
+        L.Changed -= Refresh;
         timer?.Dispose();
     }
 }

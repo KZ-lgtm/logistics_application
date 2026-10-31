@@ -1,40 +1,40 @@
 @page "/orders"
 @inherits WmsPage
 @inject TwinService Twin
-<PageTitle>Orders · Logistics WMS</PageTitle>
-<PageHeader Title="Orders" />
+<PageTitle>@L["Orders · Logistics WMS"]</PageTitle>
+<PageHeader Title="@L["Orders"]" />
 
 <div class="content">
     <section class="card">
-        <h2>New order</h2>
+        <h2>@L["New order"]</h2>
         @if (Twin.Started)
         {
-            <p class="small muted" style="margin: -4px 0 10px"><span class="dot ok"></span> The live 3D cell is running: a new order is released to the put wall as soon as a lane has an empty case and is worked there. <a href="live">Watch it</a></p>
+            <p class="small muted" style="margin: -4px 0 10px"><span class="dot ok"></span> @L["The live 3D cell is running: a new order is released to the put wall as soon as a lane has an empty case and is worked there."] <a href="live">@L["Watch it"]</a></p>
         }
         <div class="form-grid" style="grid-template-columns: minmax(160px, 1fr) 110px">
-            <div class="field"><span>Reference</span><input @bind="reference" placeholder="e.g. SHOP-10045" /></div>
-            <div class="field"><span>Priority</span><input type="number" @bind="priority" title="Higher priorities are released to the put wall first" /></div>
+            <div class="field"><span>@L["Reference"]</span><input @bind="reference" placeholder="@L["e.g. SHOP-10045"]" /></div>
+            <div class="field"><span>@L["Priority"]</span><input type="number" @bind="priority" title="@L["Higher priorities are released to the put wall first"]" /></div>
         </div>
         <div class="stack" style="margin-top: 10px">
             @for (var i = 0; i < lines.Count; i++)
             {
                 var line = lines[i];
                 <div class="line-row">
-                    <select @bind="line.Sku" aria-label="SKU">
+                    <select @bind="line.Sku" aria-label="@L["SKU"]">
                         @foreach (var s in skus)
                         {
-                            <option value="@s.Code">@s.Code · @s.Name (@s.Total in stock)</option>
+                            <option value="@s.Code">@s.Code · @L.Message(s.Name) (@L.F("{0} in stock", s.Total))</option>
                         }
                     </select>
-                    <input type="number" min="1" @bind="line.Quantity" aria-label="Quantity" />
-                    <button class="ghost" disabled="@(lines.Count == 1)" @onclick="() => lines.Remove(line)" aria-label="Remove line">✕</button>
+                    <input type="number" min="1" @bind="line.Quantity" aria-label="@L["Quantity"]" />
+                    <button class="ghost" disabled="@(lines.Count == 1)" @onclick="() => lines.Remove(line)" aria-label="@L["Remove line"]">✕</button>
                 </div>
             }
             <div class="row">
-                <button disabled="@(lines.Count >= OrderService.MaxLinesPerOrder)" @onclick="AddLine">+ Line</button>
+                <button disabled="@(lines.Count >= OrderService.MaxLinesPerOrder)" @onclick="AddLine">@L["+ Line"]</button>
                 <span class="spacer"></span>
-                <span class="muted small">Up to @OrderService.MaxLinesPerOrder SKUs per order case · same SKUs are merged</span>
-                <button class="primary" disabled="@busy" @onclick="Create">Create order</button>
+                <span class="muted small">@L.F("Up to {0} SKUs per order case · same SKUs are merged", OrderService.MaxLinesPerOrder)</span>
+                <button class="primary" disabled="@busy" @onclick="Create">@L["Create order"]</button>
             </div>
         </div>
     </section>
@@ -44,20 +44,20 @@
             <div class="tabs" style="margin: 0; border: 0">
                 @foreach (var f in Filters)
                 {
-                    <button class="@(filter == f ? "on" : "")" @onclick="() => SetFilter(f)">@(f?.ToString() ?? "All")</button>
+                    <button class="@(filter == f ? "on" : "")" @onclick="() => SetFilter(f)">@(f is null ? L["All"] : L.Enum(f))</button>
                 }
             </div>
-            <span class="muted small">newest @Take shown</span>
+            <span class="muted small">@L.F("newest {0} shown", Take)</span>
         </div>
         @if (orders.Count == 0)
         {
-            <div class="empty">No orders.</div>
+            <div class="empty">@L["No orders."]</div>
         }
         else
         {
             <div class="table-wrap tall">
                 <table>
-                    <thead><tr><th>#</th><th>Reference</th><th>Status</th><th>Prio</th><th>Lane</th><th class="r">Sorted</th><th>Created</th><th>Lines</th><th></th></tr></thead>
+                    <thead><tr><th>#</th><th>@L["Reference"]</th><th>@L["Status"]</th><th>@L["Prio"]</th><th>@L["Lane"]</th><th class="r">@L["Sorted"]</th><th>@L["Created"]</th><th>@L["Lines"]</th><th></th></tr></thead>
                     <tbody>
                         @foreach (var o in orders)
                         {
@@ -73,11 +73,11 @@
                                 <td class="r">
                                     @if (o.Status is OrderStatus.Queued or OrderStatus.Active)
                                     {
-                                        <a class="btn sm" href="live?order=@o.Id" @onclick:stopPropagation title="Watch this order in the live 3D cell">Watch in 3D</a>
+                                        <a class="btn sm" href="live?order=@o.Id" @onclick:stopPropagation title="@L["Watch this order in the live 3D cell"]">@L["Watch in 3D"]</a>
                                     }
                                     @if (o.Status == OrderStatus.Queued || (o.Status == OrderStatus.Active && o.Lines.All(l => l.Picked == 0)))
                                     {
-                                        <button class="sm danger" @onclick:stopPropagation @onclick="() => Cancel(o)">Cancel</button>
+                                        <button class="sm danger" @onclick:stopPropagation @onclick="() => Cancel(o)">@L["Cancel"]</button>
                                     }
                                 </td>
                             </tr>
@@ -87,7 +87,7 @@
                                     <td></td>
                                     <td colspan="8">
                                         <table>
-                                            <thead><tr><th>SKU</th><th class="r">Ordered</th><th class="r">Allocated</th><th class="r">Picked</th><th class="r">Sorted</th></tr></thead>
+                                            <thead><tr><th>@L["SKU"]</th><th class="r">@L["Ordered"]</th><th class="r">@L["Allocated"]</th><th class="r">@L["Picked"]</th><th class="r">@L["Sorted"]</th></tr></thead>
                                             <tbody>
                                                 @foreach (var l in o.Lines)
                                                 {
@@ -96,8 +96,8 @@
                                             </tbody>
                                         </table>
                                         <div class="small muted" style="padding: 6px 0">
-                                            Released @Fmt.Time(o.ActivatedAt) · finished @Fmt.Time(o.CompletedAt)
-                                            @if (o.ActivatedAt is DateTime a && o.CompletedAt is DateTime c) { <span> · lead time @((c - a).TotalSeconds.ToString("F0")) s</span> }
+                                            @L.F("Released {0} · finished {1}", Fmt.Time(o.ActivatedAt), Fmt.Time(o.CompletedAt))
+                                            @if (o.ActivatedAt is DateTime a && o.CompletedAt is DateTime c) { <span> · @L.F("lead time {0} s", (c - a).TotalSeconds.ToString("F0"))</span> }
                                         </div>
                                     </td>
                                 </tr>
@@ -155,8 +155,8 @@
             lines.Clear();
             AddLine();
             open = order.Id;
-            var where = order.LaneId is null ? "queued until a lane is free" : $"released to lane {order.LaneId}";
-            Notify($"Order {order.Id} ({order.Reference}) created, {where}.");
+            Notify(order.LaneId is null ? L.F("Order {0} ({1}) created, queued until a lane is free.", order.Id, order.Reference)
+                                        : L.F("Order {0} ({1}) created, released to lane {2}.", order.Id, order.Reference, order.LaneId));
         }
         busy = false;
         await LoadAsync();
@@ -164,7 +164,7 @@
 
     private async Task Cancel(OrderDto o)
     {
-        await Wms.CommandAsync(sp => sp.Get<OrderService>().CancelAsync(o.Id), $"Order {o.Id} cancelled.");
+        await Wms.CommandAsync(sp => sp.Get<OrderService>().CancelAsync(o.Id), L.F("Order {0} cancelled.", o.Id));
         await LoadAsync();
     }
 

@@ -9,39 +9,38 @@
 {
     <div class="live @(visible ? "" : "live-bg")" aria-hidden="@(!visible)">
         <header class="topbar">
-            <h1 tabindex="-1">Live 3D cell</h1>
+            <h1 tabindex="-1">@L["Live 3D cell"]</h1>
             <span class="small muted twin-note">
-                The 3D cell is the WMS's cell controller. It works the orders on the put wall, the orders you create on the Orders page,
-                as the WMS releases them, and books every pick, scan and sort. It keeps running while you use the other pages.
+                @L["The 3D cell is the WMS's cell controller. It works the orders on the put wall, the orders you create on the Orders page, as the WMS releases them, and books every pick, scan and sort. It keeps running while you use the other pages."]
             </span>
-            <button class="danger" @onclick="Stop" title="Stop the 3D cell (the WMS keeps its state; the round-based simulator or the console can continue)">Stop 3D cell</button>
+            <button class="danger" @onclick="Stop" title="@L["Stop the 3D cell (the WMS keeps its state; the round-based simulator or the console can continue)"]">@L["Stop 3D cell"]</button>
         </header>
-        <div class="robot-bar" aria-label="Robots">
+        <div class="robot-bar" aria-label="@L["Robots"]">
             @foreach (var r in robots)
             {
                 <div class="robot-chip @(r.State == RobotState.Fault ? "fault" : !r.Available ? "off" : "")">
                     <b>@r.Id</b>
-                    <span class="small">@(r.State == RobotState.Fault ? $"fault {r.FaultCode}" : r.Mode != RobotMode.Auto ? r.Mode.ToString() : r.State == RobotState.Working ? "working" : "idle")</span>
+                    <span class="small">@(r.State == RobotState.Fault ? L.F("fault {0}", r.FaultCode) : r.Mode != RobotMode.Auto ? L.Enum(r.Mode) : r.State == RobotState.Working ? L["working"] : L["idle"])</span>
                     @if (r.State == RobotState.Fault)
                     {
-                        <button class="sm primary" @onclick="() => Clear(r)">Clear</button>
+                        <button class="sm primary" @onclick="() => Clear(r)">@L["Clear"]</button>
                     }
                     else
                     {
-                        <button class="sm danger" @onclick="() => Fault(r)" title="Inject a fault: watch the WMS work around it">Fault</button>
+                        <button class="sm danger" @onclick="() => Fault(r)" title="@L["Inject a fault: watch the WMS work around it"]">@L["Fault"]</button>
                     }
-                    <select class="sm" value="@r.Mode" @onchange="e => Mode(r, e.Value?.ToString())" aria-label="@r.Id mode">
-                        @foreach (var m in Enum.GetValues<RobotMode>()) { <option value="@m">@m</option> }
+                    <select class="sm" value="@r.Mode" @onchange="e => Mode(r, e.Value?.ToString())" aria-label="@L.F("{0} mode", r.Id)">
+                        @foreach (var m in Enum.GetValues<RobotMode>()) { <option value="@m">@L.Enum(m)</option> }
                     </select>
                 </div>
             }
             <span class="spacer"></span>
-            <a class="btn" href="orders">+ New order</a>
+            <a class="btn" href="orders">+ @L["New order"]</a>
         </div>
         <div class="twin-frame">
             @if (registered)
             {
-                <iframe id="wms-twin" src="twin/index.html" title="Live 3D cell driven by the WMS" allow="fullscreen"></iframe>
+                <iframe id="wms-twin" src="twin/index.html" title="@L["Live 3D cell driven by the WMS"]" allow="fullscreen"></iframe>
             }
         </div>
     </div>
@@ -57,6 +56,7 @@
         Twin.Changed += OnTwinChanged;
         Nav.LocationChanged += OnLocationChanged;
         Wms.Changed += OnWmsChanged;
+        L.Changed += OnLanguageChanged;
         visible = OnLivePage();
     }
 
@@ -106,6 +106,12 @@
         });
     }
 
+    private void OnLanguageChanged() => InvokeAsync(async () =>
+    {
+        if (registered) await JS.InvokeVoidAsync("wms.twinCall", "wmsTwinLang", L.IsChinese ? "zh" : "en");
+        StateHasChanged();
+    });
+
     private void Stop()
     {
         Twin.Stop();
@@ -116,18 +122,19 @@
 
     private Task Fault(RobotDto r) => Wms.CommandAsync(sp => sp.Get<RobotService>().ReportFaultAsync(r.Id,
         new RobotFaultRequest(FaultCode(r), r.Role switch { RobotRole.ShelfRobot => "joint collision", RobotRole.Picker => "vacuum lost", _ => "cup worn" }, "live view")),
-        $"{r.Id}: fault injected. The WMS works around it.");
+        L.F("{0}: fault injected. The WMS works around it.", r.Id));
 
-    private Task Clear(RobotDto r) => Wms.CommandAsync(sp => sp.Get<RobotService>().ClearFaultAsync(r.Id, "live view"), $"{r.Id}: fault cleared.");
+    private Task Clear(RobotDto r) => Wms.CommandAsync(sp => sp.Get<RobotService>().ClearFaultAsync(r.Id, "live view"), L.F("{0}: fault cleared.", r.Id));
 
     private Task Mode(RobotDto r, string? mode) =>
-        Enum.TryParse<RobotMode>(mode, out var m) ? Wms.CommandAsync(sp => sp.Get<RobotService>().SetModeAsync(r.Id, new SetRobotModeRequest(m, "live view")), $"{r.Id} → {m}.") : Task.CompletedTask;
+        Enum.TryParse<RobotMode>(mode, out var m) ? Wms.CommandAsync(sp => sp.Get<RobotService>().SetModeAsync(r.Id, new SetRobotModeRequest(m, "live view")), L.F("{0} → {1}.", r.Id, L.Enum(m))) : Task.CompletedTask;
 
     public async ValueTask DisposeAsync()
     {
         Twin.Changed -= OnTwinChanged;
         Nav.LocationChanged -= OnLocationChanged;
         Wms.Changed -= OnWmsChanged;
+        L.Changed -= OnLanguageChanged;
         try { await JS.InvokeVoidAsync("wms.unregisterTwin"); } catch (JSDisconnectedException) { }
         reference?.Dispose();
     }

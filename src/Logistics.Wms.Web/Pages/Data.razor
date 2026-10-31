@@ -5,72 +5,67 @@
 @inject SimulationRunner Sim
 @inject Notifications Notifications
 @inject IJSRuntime JS
-<PageTitle>Data &amp; storage · Logistics WMS</PageTitle>
-<PageHeader Title="Data &amp; storage" />
+<PageTitle>@L["Data & storage · Logistics WMS"]</PageTitle>
+<PageHeader Title="@L["Data & storage"]" />
 
 <div class="content">
     <div class="grid">
         <section class="card span-6 stack">
-            <h2>This browser</h2>
+            <h2>@L["This browser"]</h2>
             <p class="muted" style="margin: 0">
-                The WMS keeps its database in memory and saves it to this browser's local storage a few seconds after every change.
-                Nothing is sent to a server. Other browsers and devices have their own, separate cell.
+                @L["The WMS keeps its database in memory and saves it to this browser's local storage a few seconds after every change. Nothing is sent to a server. Other browsers and devices have their own, separate cell."]
             </p>
             <table>
                 <tbody>
-                    <tr><td>Last saved</td><td class="r">@(Store.LastSaved is null ? "not yet" : Fmt.Time(Store.LastSaved))</td></tr>
-                    <tr><td>Snapshot size</td><td class="r">@Fmt.Bytes(Store.LastSize)</td></tr>
-                    <tr><td>Last save took</td><td class="r">@Store.LastSaveMs.ToString("F0") ms</td></tr>
-                    <tr><td>Local storage used by this site</td><td class="r">@Fmt.Bytes(used)</td></tr>
+                    <tr><td>@L["Last saved"]</td><td class="r">@(Store.LastSaved is null ? L["not yet"] : Fmt.Time(Store.LastSaved))</td></tr>
+                    <tr><td>@L["Snapshot size"]</td><td class="r">@Fmt.Bytes(Store.LastSize)</td></tr>
+                    <tr><td>@L["Last save took"]</td><td class="r">@Store.LastSaveMs.ToString("F0") ms</td></tr>
+                    <tr><td>@L["Local storage used by this site"]</td><td class="r">@Fmt.Bytes(used)</td></tr>
                 </tbody>
             </table>
             <div class="row">
-                <button class="primary" disabled="@busy" @onclick="Save">Save now</button>
-                <button disabled="@busy" @onclick="Compact">Compact history</button>
+                <button class="primary" disabled="@busy" @onclick="Save">@L["Save now"]</button>
+                <button disabled="@busy" @onclick="Compact">@L["Compact history"]</button>
             </div>
             <p class="small muted" style="margin: 0">
-                Compaction keeps the newest 300 finished orders and 2,000 ledger bookings. Older bookings are folded into one opening balance per bin,
-                so stock stays exact, and lifetime totals on the dashboard are kept. It runs automatically once there are more than 600 orders, which keeps the cell fast and the snapshot well within local storage.
+                @L["Compaction keeps the newest 300 finished orders and 2,000 ledger bookings. Older bookings are folded into one opening balance per bin, so stock stays exact, and lifetime totals on the dashboard are kept. It runs automatically once there are more than 600 orders, which keeps the cell fast and the snapshot well within local storage."]
             </p>
         </section>
 
         <section class="card span-6 stack">
-            <h2>Backup &amp; restore</h2>
-            <p class="muted" style="margin: 0">Export the complete WMS state as a JSON file, or load one exported earlier, for example from another browser. Loading replaces the current state.</p>
+            <h2>@L["Backup & restore"]</h2>
+            <p class="muted" style="margin: 0">@L["Export the complete WMS state as a JSON file, or load one exported earlier, for example from another browser. Loading replaces the current state."]</p>
             <div class="row">
-                <button disabled="@busy" @onclick="Export">Export JSON</button>
+                <button disabled="@busy" @onclick="Export">@L["Export JSON"]</button>
                 <label class="btn" style="color: var(--text)">
-                    Import JSON…
+                    @L["Import JSON…"]
                     <InputFile accept=".json,application/json" OnChange="Import" style="display: none" />
                 </label>
             </div>
-            <h2 style="margin-top: 10px">Start over</h2>
-            <p class="muted" style="margin: 0">Back to the initial cell: 40 SKUs, 120 bins with the seeded stock, no orders.</p>
+            <h2 style="margin-top: 10px">@L["Start over"]</h2>
+            <p class="muted" style="margin: 0">@L["Back to the initial cell: 40 SKUs, 120 bins with the seeded stock, no orders."]</p>
             <div class="row">
                 @if (confirmReset)
                 {
-                    <span class="warn">All orders, bookings and changes in this browser will be deleted.</span>
-                    <button class="danger" @onclick="Reset">Yes, reset the cell</button>
-                    <button class="ghost" @onclick="() => confirmReset = false">Keep</button>
+                    <span class="warn">@L["All orders, bookings and changes in this browser will be deleted."]</span>
+                    <button class="danger" @onclick="Reset">@L["Yes, reset the cell"]</button>
+                    <button class="ghost" @onclick="() => confirmReset = false">@L["Keep"]</button>
                 }
                 else
                 {
-                    <button class="danger" @onclick="() => confirmReset = true">Reset cell…</button>
+                    <button class="danger" @onclick="() => confirmReset = true">@L["Reset cell…"]</button>
                 }
             </div>
         </section>
 
         <section class="card span-12">
-            <h2>About this edition</h2>
+            <h2>@L["About this edition"]</h2>
             <p style="margin-top: 0">
-                This is the browser edition of the Logistics WMS. It runs the <b>same C# domain model and WMS services</b> as the ASP.NET Core server
-                edition (<code>src/Logistics.Wms.Application</code>), compiled to WebAssembly with Blazor. The difference is the database: here EF Core's in-memory
-                provider, saved to local storage; on the server, SQLite. It is meant for demonstration, training and process studies. A real cell connects
-                to the server edition's HTTP API.
+                @L["This is the browser edition of the Logistics WMS. It runs the same C# domain model and WMS services as the ASP.NET Core server edition (src/Logistics.Wms.Application), compiled to WebAssembly with Blazor. The difference is the database: here EF Core's in-memory provider, saved to local storage; on the server, SQLite. It is meant for demonstration, training and process studies. A real cell connects to the server edition's HTTP API."]
             </p>
             <p class="muted" style="margin-bottom: 0">
-                Source and documentation: <a href="https://github.com/KZ-lgtm/logistics_application">github.com/KZ-lgtm/logistics_application</a> ·
-                the 3D cell simulation: <a href="../simulation/robot_cell.html">robot_cell.html</a>
+                @L["Source and documentation:"] <a href="https://github.com/KZ-lgtm/logistics_application">github.com/KZ-lgtm/logistics_application</a> ·
+                @L["the 3D cell simulation:"] <a href="../simulation/robot_cell.html">robot_cell.html</a>
             </p>
         </section>
     </div>
@@ -99,7 +94,7 @@
         busy = true;
         await Store.SaveAsync();
         await Measure();
-        Notifications.Info(Store.Warning ?? $"Saved ({Fmt.Bytes(Store.LastSize)}).");
+        Notifications.Info(Store.Warning ?? L.F("Saved ({0}).", Fmt.Bytes(Store.LastSize)));
         busy = false;
     }
 
@@ -109,7 +104,7 @@
         var r = await Store.CompactAsync();
         await Store.SaveAsync();
         await Measure();
-        Notifications.Info($"Compacted: {r.OrdersRemoved} orders, {r.PickTasksRemoved} pick tasks and {r.AsrsTasksRemoved} R1 tasks archived, {r.TransactionsFolded} bookings folded into {r.OpeningBalances} opening balances.");
+        Notifications.Info(L.F("Compacted: {0} orders, {1} pick tasks and {2} R1 tasks archived, {3} bookings folded into {4} opening balances.", r.OrdersRemoved, r.PickTasksRemoved, r.AsrsTasksRemoved, r.TransactionsFolded, r.OpeningBalances));
         busy = false;
     }
 
@@ -130,11 +125,11 @@
             using var reader = new StreamReader(e.File.OpenReadStream(MaxImport));
             await Store.RestoreAsync(await reader.ReadToEndAsync());
             await Store.SaveAsync();
-            Notifications.Info($"Loaded {e.File.Name}.");
+            Notifications.Info(L.F("Loaded {0}.", e.File.Name));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Notifications.Error($"{e.File.Name} could not be loaded: {ex.Message}");
+            Notifications.Error(L.F("{0} could not be loaded: {1}", e.File.Name, L.Message(ex.Message)));
         }
         await Measure();
         busy = false;
@@ -146,7 +141,7 @@
         Sim.Stop();
         await Store.ResetAsync();
         await Store.SaveAsync();
-        Notifications.Info("The cell was reset to its initial stock.");
+        Notifications.Info(L["The cell was reset to its initial stock."]);
     }
 
     public void Dispose() => Wms.Changed -= Refresh;

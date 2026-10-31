@@ -23,6 +23,7 @@ var clock = new SimClock();
 builder.Services.AddSingleton(clock);
 builder.Services.AddSingleton<TimeProvider>(clock);     // replaces TimeProvider.System: WMS time follows the live 3D cell
 builder.Services.AddSingleton<Notifications>();
+builder.Services.AddSingleton<Localizer>();
 builder.Services.AddSingleton<WmsClient>();
 builder.Services.AddSingleton<BrowserStore>();
 builder.Services.AddSingleton<SimulationRunner>();
@@ -30,6 +31,7 @@ builder.Services.AddSingleton<TwinBridge>();
 builder.Services.AddSingleton<TwinService>();
 
 var host = builder.Build();
+await host.Services.GetRequiredService<Localizer>().InitializeAsync();
 await host.Services.GetRequiredService<BrowserStore>().LoadAsync();
 _ = host.Services.GetRequiredService<BrowserStore>().RunAutosaveAsync(TimeSpan.FromSeconds(3), CancellationToken.None);
 _ = host.Services.GetRequiredService<SimulationRunner>().RunAsync(CancellationToken.None);
