@@ -1,0 +1,55 @@
+@page "/manual"
+@using Markdig
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+<PageTitle>@L["User manual · Logistics WMS"]</PageTitle>
+<PageHeader Title="@L["User manual"]" />
+
+<div class="content">
+    @if (html is null)
+    {
+        <div class="empty">@(failed ? L["The manual could not be loaded."] : L["Loading…"])</div>
+    }
+    else
+    {
+        <article class="card manual">@((MarkupString)html)</article>
+    }
+</div>
+
+@code {
+    // the manual in the UI language (docs/manual/user-manual.<lang>.md), rendered with Markdig
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+    private string? html;
+    private bool failed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var file = L.IsChinese ? "user-manual.zh-Hant.md" : "user-manual.en.md";
+        try
+        {
+            var md = await Http.GetStringAsync("manual/" + file);
+            var h = Markdown.ToHtml(md, Pipeline);
+            // relative images and in-page links are relative to manual/ (and to this page for #anchors)
+            html = h.Replace("src=\"images/", "src=\"manual/images/").Replace("href=\"#", "href=\"manual#")
+                    .Replace("href=\"user-manual.", "href=\"manual/user-manual.");
+        }
+        catch (HttpRequestException)
+        {
+            failed = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // a link such as manual#robots opens at that section
+        var hash = new Uri(Nav.Uri).Fragment;
+        if (html is not null && hash.Length > 1 && !scrolled)
+        {
+            scrolled = true;
+            await JS.InvokeVoidAsync("wms.scrollTo", hash[1..]);
+        }
+    }
+
+    private bool scrolled;
+}

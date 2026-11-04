@@ -204,3 +204,15 @@ a.btn.sm { padding: 2px 8px; font-size: 12px; }
 .side .lang { margin: 12px 8px 0; align-self: flex-start; }
 .side .lang button { padding: 3px 12px; }
 @media (max-width: 860px) { .side .lang { margin: 0 0 0 auto; } }
+
+/* ---------------------------------------------------------------- user manual */
+.manual { max-width: 980px; font-size: 14px; line-height: 1.65; padding: 18px 28px 28px; }
+.manual h1 { font-size: 24px; margin: 4px 0 12px; }
+.manual h2 { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 30px 0 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.manual h3 { font-size: 15px; margin: 20px 0 6px; }
+.manual p, .manual li { color: #d5dade; }
+.manual img { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; margin: 6px 0 4px; }
+.manual table { margin: 8px 0 14px; } .manual th, .manual td { white-space: normal; vertical-align: top; }
+.manual blockquote { margin: 10px 0; padding: 6px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 6px 6px 0; }
+.manual code { font-size: 12.5px; } .manual pre { background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; }
+.manual a { color: #ff8a45; }

@@ -22,6 +22,7 @@ builder.Services.AddScoped<IWmsDbContext>(sp => sp.GetRequiredService<WmsDbConte
 var clock = new SimClock();
 builder.Services.AddSingleton(clock);
 builder.Services.AddSingleton<TimeProvider>(clock);     // replaces TimeProvider.System: WMS time follows the live 3D cell
+builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddSingleton<Notifications>();
 builder.Services.AddSingleton<Localizer>();
 builder.Services.AddSingleton<WmsClient>();

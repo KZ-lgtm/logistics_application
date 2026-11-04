@@ -62,6 +62,7 @@ window.wms = {
         try { localStorage.setItem(key, v); } catch (e) { }
         document.documentElement.lang = v === 'zh-Hant' ? 'zh-Hant-TW' : 'en';
     },
+    scrollTo: function (id) { var e = document.getElementById(decodeURIComponent(id)); if (e) e.scrollIntoView(); },
     storageEstimate: function () {
         var n = 0;
         try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || '').length; } } catch (e) { }

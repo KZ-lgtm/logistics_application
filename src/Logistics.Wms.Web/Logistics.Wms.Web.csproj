@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.5.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.14" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.14" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.14" />
@@ -16,8 +17,12 @@
 
   <!-- the 3D cell engine, robot models and kinematics come unchanged from the cell simulation (simulation/canvas/project) -->
   <ItemGroup>
-    <Content Include="..\..\simulation\canvas\project\three.min.js;..\..\simulation\canvas\project\robot_glb.js;..\..\simulation\canvas\project\station_ui.js;..\..\simulation\canvas\project\app.js"
-             Link="wwwroot\twin\cell\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\simulation\canvas\project\three.min.js;..\..\simulation\canvas\project\robot_glb.js;..\..\simulation\canvas\project\station_ui.js;..\..\simulation\canvas\project\app.js" Link="wwwroot\twin\cell\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- the user manuals (docs/manual) are served under manual/ and shown by the Manual page -->
+  <ItemGroup>
+    <Content Include="..\..\docs\manual\**\*.md;..\..\docs\manual\**\*.png" Link="wwwroot\manual\%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

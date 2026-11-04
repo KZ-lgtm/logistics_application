@@ -35,6 +35,8 @@ tools/make_wms_station.py       derives the live 3D cell's WMS-driven station fr
 simulation/                     the original 3D cell simulation and risk assessment (unchanged)
 ```
 
+**User manuals:** [English](docs/manual/user-manual.en.md) · [繁體中文](docs/manual/user-manual.zh-Hant.md) (also built into the WMS: **User manual** in its sidebar).
+
 ## Quick start
 
 Requires the .NET 10 SDK.
